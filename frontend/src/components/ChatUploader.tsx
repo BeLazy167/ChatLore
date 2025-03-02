@@ -1,241 +1,200 @@
 import React, { useState, useRef } from "react";
-import { useUploadChat } from "../lib/queries";
 import { Button } from "./ui/button";
 import {
     Card,
     CardContent,
     CardDescription,
-    CardFooter,
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import { Upload } from "lucide-react";
+import { Upload, X, FileText } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { useUploadChat } from "@/lib/queries";
 
 interface ChatUploaderProps {
-    selectedChatId?: string | null;
-    onChatUploaded?: (chatId: string) => void;
     initialChatName?: string;
 }
 
-// Define the response type based on the API response structure
-interface ChatUploadResponse {
-    message: string;
-    total_messages: number;
-    statistics: Record<string, unknown>;
-    messages: Array<{
-        timestamp: string;
-        sender: string;
-        content: string;
-        message_type: string;
-        duration: string;
-        url: string;
-        language: string;
-        is_system_message: boolean;
-    }>;
-    id?: string; // Add this field to match what's being used in the code
-}
-
-export function ChatUploader({
-    selectedChatId,
-    onChatUploaded,
-    initialChatName = "",
-}: ChatUploaderProps) {
-    const [fileName, setFileName] = useState<string>("");
-    const [chatName, setChatName] = useState<string>(initialChatName);
+export function ChatUploader({ initialChatName }: ChatUploaderProps) {
+    const [chatName, setChatName] = useState(initialChatName || "");
+    const [uploadError, setUploadError] = useState<string | null>(null);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const { mutate: uploadChat, isSuccess } = useUploadChat(chatName);
 
-    // Use the TanStack Query mutation
-    const uploadChatMutation = useUploadChat();
+    const handleFileUpload = async (
+        event: React.ChangeEvent<HTMLInputElement>
+    ) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        setSelectedFile(file);
+    };
 
-    // Update chat name when initialChatName changes
-    React.useEffect(() => {
-        if (initialChatName) {
-            setChatName(initialChatName);
-        }
-    }, [initialChatName]);
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files.length > 0) {
-            const file = e.target.files[0];
-            setFileName(file.name);
-
-            // Auto-generate a chat name from the file name if no chat is selected
-            if (!selectedChatId) {
-                const nameWithoutExtension = file.name.replace(/\.[^/.]+$/, "");
-                setChatName(nameWithoutExtension);
-            }
+    const handleRemoveFile = () => {
+        setSelectedFile(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
         }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (
-            !fileInputRef.current?.files ||
-            fileInputRef.current.files.length === 0
-        ) {
-            alert("Please select a file to upload");
+    const handleUploadAndAnalyze = async () => {
+        if (!selectedFile) {
+            setUploadError("Please select a file to upload");
             return;
         }
 
-        const file = fileInputRef.current.files[0];
+        if (!chatName.trim()) {
+            setUploadError("Please enter a chat name");
+            return;
+        }
 
         try {
-            // Read the file content
-            const reader = new FileReader();
-            reader.onload = async (event) => {
-                if (event.target?.result) {
-                    const chatText = event.target.result as string;
-
-                    // Use TanStack Query mutation to upload the file
-                    const response = await uploadChatMutation.mutateAsync(
-                        chatText
-                    );
-
-                    // Notify parent component about the new chat
-                    if (onChatUploaded && response) {
-                        // Handle the case where id might not exist directly
-                        const chatId =
-                            (response as ChatUploadResponse).id || "";
-                        onChatUploaded(chatId);
-                    }
-
-                    // Reset form
-                    setFileName("");
-                    if (!selectedChatId) {
-                        setChatName("");
-                    }
-                    if (fileInputRef.current) {
-                        fileInputRef.current.value = "";
-                    }
-                }
-            };
-            reader.readAsText(file);
+            const fileText = await selectedFile.text();
+            uploadChat(fileText);
+            setUploadError(null);
         } catch (error) {
-            console.error("Error uploading chat:", error);
+            setUploadError("Error reading file. Please try again.");
+            console.error("Error reading file:", error);
         }
     };
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Upload WhatsApp Chat</CardTitle>
-                <CardDescription>
-                    Export your WhatsApp chat and upload the .txt file here
+        <Card className="w-full max-w-2xl">
+            <CardHeader className="text-center pb-6">
+                <CardTitle className="text-2xl font-bold">
+                    Upload WhatsApp Chat
+                </CardTitle>
+                <CardDescription className="text-base mt-2">
+                    Export your WhatsApp chat and upload the .txt file to
+                    analyze
                 </CardDescription>
             </CardHeader>
-            <CardContent>
-                <div className="space-y-4">
-                    <form onSubmit={handleSubmit}>
-                        <div className="mb-4">
-                            <label
-                                className="block text-sm font-medium mb-1"
-                                htmlFor="chatName"
-                            >
-                                Chat Name
-                            </label>
-                            <input
-                                type="text"
-                                id="chatName"
-                                className="w-full p-2 border rounded-md bg-background"
-                                value={chatName}
-                                onChange={(e) => setChatName(e.target.value)}
-                                placeholder="Enter a name for this chat"
-                                required
-                                disabled={!!selectedChatId}
-                            />
-                        </div>
-
-                        <div className="mb-4">
-                            <label
-                                className="block text-sm font-medium mb-1"
-                                htmlFor="chatFile"
-                            >
-                                Chat File
-                            </label>
-                            <div className="flex items-center gap-2">
-                                <label className="flex-1">
-                                    <div className="w-full p-2 border rounded-md bg-background flex items-center cursor-pointer">
-                                        <span className="flex-1 truncate">
-                                            {fileName || "Choose a file..."}
-                                        </span>
-                                        <span className="px-3 py-1 bg-primary text-primary-foreground rounded-md text-sm">
-                                            Browse
-                                        </span>
-                                    </div>
-                                    <input
-                                        type="file"
-                                        id="chatFile"
-                                        ref={fileInputRef}
-                                        className="hidden"
-                                        accept=".txt"
-                                        onChange={handleFileChange}
-                                    />
-                                </label>
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                {selectedChatId
-                                    ? "Upload a new file to update this chat"
-                                    : "Upload a WhatsApp chat export (.txt file)"}
-                            </p>
-                        </div>
-
-                        <button
-                            type="submit"
-                            className="w-full py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-                            disabled={uploadChatMutation.isPending}
-                        >
-                            {uploadChatMutation.isPending ? (
-                                <span className="flex items-center justify-center">
-                                    <span className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-2"></span>
-                                    Uploading...
-                                </span>
-                            ) : selectedChatId ? (
-                                "Update Chat"
-                            ) : (
-                                "Upload Chat"
-                            )}
-                        </button>
-
-                        {uploadChatMutation.isError && (
-                            <div className="mt-2 p-2 bg-destructive/10 text-destructive rounded-md text-sm">
-                                Error:{" "}
-                                {(uploadChatMutation.error as Error).message}
-                            </div>
-                        )}
-
-                        {uploadChatMutation.isSuccess && (
-                            <div className="mt-2 p-2 bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-400 rounded-md text-sm">
-                                Chat uploaded successfully!
-                            </div>
-                        )}
-                    </form>
+            <CardContent className="space-y-6">
+                <div className="space-y-2">
+                    <Label htmlFor="chatName" className="text-sm font-medium">
+                        Chat Name
+                    </Label>
+                    <Input
+                        id="chatName"
+                        value={chatName}
+                        onChange={(e) => setChatName(e.target.value)}
+                        placeholder="Enter a name for this chat"
+                        className="h-11"
+                    />
                 </div>
-            </CardContent>
-            <CardFooter>
+
+                {!selectedFile ? (
+                    <div className="border-2 border-dashed rounded-xl p-8 text-center space-y-4 hover:border-primary/50 transition-colors">
+                        <div className="flex flex-col items-center gap-3">
+                            <Upload className="h-10 w-10 text-muted-foreground" />
+                            <div className="space-y-2">
+                                <h3 className="font-semibold text-lg">
+                                    Drop your chat file here
+                                </h3>
+                                <p className="text-sm text-muted-foreground">
+                                    or click to browse from your computer
+                                </p>
+                            </div>
+                        </div>
+                        <Input
+                            type="file"
+                            accept=".txt"
+                            className="hidden"
+                            id="file-upload"
+                            ref={fileInputRef}
+                            onChange={handleFileUpload}
+                        />
+                        <Button
+                            variant="outline"
+                            className="mt-4"
+                            onClick={() =>
+                                document.getElementById("file-upload")?.click()
+                            }
+                        >
+                            Select File
+                        </Button>
+                    </div>
+                ) : (
+                    <div className="border-2 rounded-xl p-6 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <FileText className="h-8 w-8 text-primary" />
+                                <div className="space-y-1">
+                                    <h3 className="font-medium">
+                                        {selectedFile.name}
+                                    </h3>
+                                    <p className="text-xs text-muted-foreground">
+                                        {(selectedFile.size / 1024).toFixed(2)}{" "}
+                                        KB
+                                    </p>
+                                </div>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={handleRemoveFile}
+                                className="text-muted-foreground hover:text-foreground"
+                            >
+                                <X className="h-5 w-5" />
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
                 <Button
-                    onClick={handleSubmit}
-                    disabled={
-                        !fileInputRef.current?.files?.length ||
-                        uploadChatMutation.isPending
-                    }
-                    className="w-full"
+                    className="w-full h-11 text-base font-medium"
+                    size="lg"
+                    onClick={handleUploadAndAnalyze}
+                    disabled={!selectedFile}
                 >
-                    {uploadChatMutation.isPending ? (
-                        <span className="flex items-center justify-center">
-                            <span className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-2"></span>
-                            Uploading...
-                        </span>
-                    ) : (
-                        <>
-                            <Upload className="mr-2 h-4 w-4" />
-                            {selectedChatId
-                                ? "Update and Analyze"
-                                : "Upload and Analyze"}
-                        </>
-                    )}
+                    <Upload className="mr-2 h-5 w-5" />
+                    Upload and Analyze
                 </Button>
-            </CardFooter>
+                {isSuccess && (
+                    <div className="text-green-500 text-sm">
+                        Chat uploaded successfully
+                    </div>
+                )}
+
+                <div className="bg-muted/30 rounded-lg p-6 space-y-4">
+                    <h3 className="font-semibold text-lg">
+                        How to Export Your Chat
+                    </h3>
+                    <ol className="space-y-3">
+                        <li className="flex items-start gap-3">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-medium">
+                                1
+                            </span>
+                            <p className="text-sm">
+                                Open WhatsApp and go to the chat you want to
+                                analyze
+                            </p>
+                        </li>
+                        <li className="flex items-start gap-3">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-medium">
+                                2
+                            </span>
+                            <p className="text-sm">
+                                Tap the three dots ⋮ and select "More" → "Export
+                                chat"
+                            </p>
+                        </li>
+                        <li className="flex items-start gap-3">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-medium">
+                                3
+                            </span>
+                            <p className="text-sm">
+                                Choose "Without media" and save the .txt file
+                            </p>
+                        </li>
+                    </ol>
+                </div>
+
+                {uploadError && (
+                    <div className="text-red-500 text-sm">{uploadError}</div>
+                )}
+            </CardContent>
         </Card>
     );
 }

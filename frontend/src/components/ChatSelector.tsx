@@ -41,7 +41,6 @@ interface Chat {
     uploadDate: string;
     messageCount: number;
 }
-
 export function ChatSelector({
     selectedChatId,
     onChatSelected,
@@ -62,9 +61,24 @@ export function ChatSelector({
     const fetchChatsFromLocalStorage = () => {
         setIsLoading(true);
         try {
-            const storedChats = localStorage.getItem("chats");
-            if (storedChats) {
-                setChats(JSON.parse(storedChats));
+            const chatNames = localStorage.getItem("chat_names");
+            if (chatNames) {
+                const parsedChatNames = JSON.parse(chatNames);
+                const loadedChats: Chat[] = [];
+
+                for (const chatName of parsedChatNames) {
+                    const messages = JSON.parse(
+                        localStorage.getItem(chatName) || "[]"
+                    );
+                    loadedChats.push({
+                        id: chatName, // Using chatName as ID for simplicity
+                        name: chatName,
+                        uploadDate: new Date().toISOString(), // Default date since we don't store this
+                        messageCount: messages.length,
+                    });
+                }
+
+                setChats(loadedChats);
             } else {
                 setChats([]);
             }
@@ -78,19 +92,23 @@ export function ChatSelector({
 
     const deleteChat = (chatId: string) => {
         try {
-            // Get current chats from localStorage
-            const storedChats = localStorage.getItem("chats");
-            if (storedChats) {
-                const parsedChats = JSON.parse(storedChats);
-                // Filter out the chat to delete
-                const updatedChats = parsedChats.filter(
-                    (chat: Chat) => chat.id !== chatId
-                );
-                // Save back to localStorage
-                localStorage.setItem("chats", JSON.stringify(updatedChats));
-                // Update state
-                setChats(updatedChats);
-            }
+            // Get current chat names from localStorage
+            const chatNames = JSON.parse(
+                localStorage.getItem("chat_names") || "[]"
+            );
+            // Filter out the chat to delete
+            const updatedChatNames = chatNames.filter(
+                (name: string) => name !== chatId
+            );
+            // Save back to localStorage
+            localStorage.setItem(
+                "chat_names",
+                JSON.stringify(updatedChatNames)
+            );
+            // Remove the chat data
+            localStorage.removeItem(chatId);
+            // Update state
+            fetchChatsFromLocalStorage();
 
             // If the deleted chat was selected, deselect it
             if (selectedChatId === chatId) {
@@ -102,9 +120,30 @@ export function ChatSelector({
     };
 
     const handleChatSelect = (chatId: string) => {
+        // Get the chat data from localStorage
+        const messages = localStorage.getItem(chatId);
+        if (!messages) return;
+
+        // Store the selected chat ID
+        localStorage.setItem("selectedChatId", chatId);
         onChatSelected(chatId);
     };
 
+    // Load selected chat on mount
+    useEffect(() => {
+        const storedSelectedChatId = localStorage.getItem("selectedChatId");
+        if (storedSelectedChatId) {
+            onChatSelected(storedSelectedChatId);
+        } else {
+            // If no chat is selected but chats exist, select the first one
+            const chatNames = JSON.parse(
+                localStorage.getItem("chat_names") || "[]"
+            );
+            if (chatNames.length > 0) {
+                onChatSelected(chatNames[0]);
+            }
+        }
+    }, [onChatSelected]);
     const handleDeleteChat = (chatId: string) => {
         setChatToDelete(chatId);
         setIsDeleteDialogOpen(true);
@@ -119,17 +158,22 @@ export function ChatSelector({
     };
 
     return (
-        <Card className="h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <Card className="h-full border-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b">
                 <div>
-                    <CardTitle>Your Chats</CardTitle>
-                    <CardDescription>
-                        Select a chat to view or upload
+                    <CardTitle className="text-2xl font-bold">
+                        Your Chats
+                    </CardTitle>
+                    <CardDescription className="text-sm mt-1">
+                        Select a chat to view its contents
                     </CardDescription>
                 </div>
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger asChild>
-                        <Button size="sm" className="h-8 gap-1">
+                        <Button
+                            size="sm"
+                            className="h-9 px-4 gap-2 bg-primary hover:bg-primary/90"
+                        >
                             <Plus className="h-4 w-4" />
                             New Chat
                         </Button>
@@ -177,53 +221,66 @@ export function ChatSelector({
                     </DialogContent>
                 </Dialog>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4">
                 {isLoading ? (
-                    <div className="flex justify-center py-8">
-                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    <div className="flex justify-center items-center py-12">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     </div>
                 ) : chats.length === 0 ? (
-                    <Alert>
-                        <AlertTitle>No chats found</AlertTitle>
-                        <AlertDescription>
-                            You haven't uploaded any chats yet. Create a new
-                            chat to get started.
+                    <Alert className="bg-muted/50 border-2">
+                        <AlertTitle className="text-lg font-semibold">
+                            No chats found
+                        </AlertTitle>
+                        <AlertDescription className="text-muted-foreground mt-1">
+                            Start by creating a new chat using the button above.
                         </AlertDescription>
                     </Alert>
                 ) : (
-                    <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+                    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
                         {chats.map((chat) => (
-                            <div
+                            <button
                                 key={chat.id}
-                                className={`flex items-center justify-between p-3 rounded-md cursor-pointer ${
+                                className={`w-full text-left transition-all duration-200 ${
                                     selectedChatId === chat.id
-                                        ? "bg-primary/10 border border-primary/20"
-                                        : "hover:bg-muted"
-                                }`}
+                                        ? "bg-primary/10 border-2 border-primary shadow-sm"
+                                        : "hover:bg-muted/50 border-2 border-transparent hover:border-muted"
+                                } rounded-lg p-4 group relative`}
                                 onClick={() => handleChatSelect(chat.id)}
                             >
-                                <div className="flex flex-col">
-                                    <span className="font-medium">
-                                        {chat.name}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">
-                                        {new Date(
-                                            chat.uploadDate
-                                        ).toLocaleDateString()}{" "}
-                                        • {chat.messageCount} messages
-                                    </span>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex flex-col gap-1">
+                                        <span className="font-semibold text-lg">
+                                            {chat.name}
+                                        </span>
+                                        <span className="text-sm text-muted-foreground flex items-center gap-2">
+                                            {new Date(
+                                                chat.uploadDate
+                                            ).toLocaleDateString()}
+                                            <span className="inline-block w-1 h-1 rounded-full bg-muted-foreground"></span>
+                                            {chat.messageCount} messages
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        {selectedChatId === chat.id && (
+                                            <span className="text-primary text-sm font-medium">
+                                                Selected
+                                            </span>
+                                        )}
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteChat(chat.id);
+                                            }}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                 </div>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeleteChat(chat.id);
-                                    }}
-                                >
-                                    <Trash2 className="h-4 w-4 text-muted-foreground" />
-                                </Button>
-                            </div>
+                            </button>
                         ))}
                     </div>
                 )}

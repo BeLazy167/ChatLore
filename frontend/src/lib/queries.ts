@@ -8,7 +8,7 @@ import { api } from "./api";
 
 const queryClient = new QueryClient();
 // Chat queries
-export function useUploadChat() {
+export function useUploadChat(chatName: string) {
     const queryClient = useQueryClient();
 
     return useMutation({
@@ -18,22 +18,32 @@ export function useUploadChat() {
             queryClient.invalidateQueries({ queryKey: ["messages"] });
             queryClient.invalidateQueries({ queryKey: ["security"] });
             queryClient.invalidateQueries({ queryKey: ["topics"] });
-            localStorage.setItem(
-                "processed_chat",
-                JSON.stringify(res.messages)
-            );
+            // create an array of chat names and save it to local storage
+
+            if (!localStorage.getItem("chat_names")) {
+                localStorage.setItem("chat_names", JSON.stringify([chatName]));
+            } else {
+                const chatNames = JSON.parse(
+                    localStorage.getItem("chat_names") || "[]"
+                );
+                chatNames.push(chatName);
+                localStorage.setItem("chat_names", JSON.stringify(chatNames));
+            }
+            localStorage.setItem(chatName, JSON.stringify(res.messages));
         },
         onError: (error) => {
             console.error("Error uploading chat:", error);
         },
     });
 }
-
 export function useSecurityAnalysisStateless() {
     return useQuery({
         queryKey: ["analytics"],
         queryFn: async () => {
-            const processedChat = localStorage.getItem("processed_chat");
+            const chatNames = JSON.parse(
+                localStorage.getItem("chat_names") || "[]"
+            );
+            const processedChat = localStorage.getItem(chatNames[0]);
             if (!processedChat) {
                 return null;
             }
@@ -48,7 +58,10 @@ export function useSecurityInsightsStateless() {
     return useQuery({
         queryKey: ["securityInsights"],
         queryFn: async () => {
-            const processedChat = localStorage.getItem("processed_chat");
+            const chatNames = JSON.parse(
+                localStorage.getItem("chat_names") || "[]"
+            );
+            const processedChat = localStorage.getItem(chatNames[0]);
             if (!processedChat) {
                 return null;
             }
@@ -62,7 +75,10 @@ export function useSecurityInsightsV2Stateless() {
     return useQuery({
         queryKey: ["securityInsightsv2"],
         queryFn: async () => {
-            const processedChat = localStorage.getItem("processed_chat");
+            const chatNames = JSON.parse(
+                localStorage.getItem("chat_names") || "[]"
+            );
+            const processedChat = localStorage.getItem(chatNames[0]);
             if (!processedChat) {
                 return null;
             }
@@ -80,7 +96,10 @@ export function useSearchSemanticStateless(
     return useMutation({
         mutationKey: ["searchSemantic", query],
         mutationFn: async () => {
-            const processedChat = localStorage.getItem("processed_chat");
+            const chatNames = JSON.parse(
+                localStorage.getItem("chat_names") || "[]"
+            );
+            const processedChat = localStorage.getItem(chatNames[0]);
             if (!processedChat) {
                 return null;
             }
@@ -111,7 +130,10 @@ export function useSearchSimilarStateless(
     return useMutation({
         mutationKey: ["searchSimilar", message],
         mutationFn: async () => {
-            const processedChat = localStorage.getItem("processed_chat");
+            const chatNames = JSON.parse(
+                localStorage.getItem("chat_names") || "[]"
+            );
+            const processedChat = localStorage.getItem(chatNames[0]);
             if (!processedChat) {
                 return null;
             }

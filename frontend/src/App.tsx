@@ -16,22 +16,13 @@ export default function App() {
     const [activeTab, setActiveTab] = useState("upload");
     const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
     const [newChatName, setNewChatName] = useState<string>("");
-    const [isCreatingChat, setIsCreatingChat] = useState<boolean>(false);
 
     const handleChatSelected = (chatId: string) => {
         setSelectedChatId(chatId);
-        setIsCreatingChat(false);
-    };
-
-    const handleChatUploaded = (chatId: string) => {
-        setSelectedChatId(chatId);
-        setIsCreatingChat(false);
-        setNewChatName("");
     };
 
     const handleCreateNewChat = (chatName: string) => {
         setNewChatName(chatName);
-        setIsCreatingChat(true);
         setSelectedChatId(null);
     };
 
@@ -114,15 +105,7 @@ export default function App() {
                                 </div>
                                 <div>
                                     <ChatUploader
-                                        selectedChatId={
-                                            isCreatingChat
-                                                ? null
-                                                : selectedChatId
-                                        }
-                                        onChatUploaded={handleChatUploaded}
-                                        initialChatName={
-                                            isCreatingChat ? newChatName : ""
-                                        }
+                                        initialChatName={newChatName}
                                     />
                                 </div>
                             </div>
