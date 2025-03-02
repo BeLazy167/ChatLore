@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
     Card,
     CardContent,
@@ -11,7 +11,14 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { ScrollArea } from "./ui/scroll-area";
-import { Send, Bot, User } from "lucide-react";
+import { Send, Bot, User, Paperclip, Trash2, Link } from "lucide-react";
+import { Badge } from "./ui/badge";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "./ui/tooltip";
 
 interface ChatMessage {
     id: string;
@@ -27,23 +34,42 @@ interface ChatMessage {
     }>;
 }
 
-const ChatInterface = () => {
-    // Dummy implementation for now
+interface ChatInterfaceProps {
+    chatId?: string;
+    chatName?: string;
+    onDeleteChat?: (chatId: string) => void;
+}
+
+const ChatInterface = ({
+    chatId,
+    chatName,
+    onDeleteChat,
+}: ChatInterfaceProps) => {
     const [messages, setMessages] = useState<ChatMessage[]>([
         {
             id: "welcome",
             content:
-                "This is a dummy chat interface. Functionality coming soon!",
+                "Welcome to ChatLore! I'm here to help you explore your chat data. Ask me anything about your conversations.",
             sender: "ChatLore",
             timestamp: new Date(),
             isUser: false,
         },
     ]);
     const [inputValue, setInputValue] = useState("");
+    const [isTyping, setIsTyping] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
 
-    // Dummy data for development
+    useEffect(() => {
+        // Scroll to bottom whenever messages change
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages]);
+
+    useEffect(() => {
+        // Focus input when component mounts
+        inputRef.current?.focus();
+    }, []);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setInputValue(e.target.value);
@@ -64,50 +90,96 @@ const ChatInterface = () => {
 
         setMessages((prev) => [...prev, userMessage]);
         setInputValue("");
+        setIsTyping(true);
 
-        // Add dummy response
+        // Simulate response
         setTimeout(() => {
             const botMessage: ChatMessage = {
                 id: (Date.now() + 1).toString(),
                 content:
-                    "This is a dummy response. Real functionality coming soon!",
+                    "I found some relevant information in your chat history. Let me analyze that for you...",
                 sender: "ChatLore",
                 timestamp: new Date(),
                 isUser: false,
                 confidence: 0.85,
+                relevantMessages: [
+                    {
+                        sender: "Alice",
+                        content:
+                            "Let's meet tomorrow at 2pm at the coffee shop.",
+                        timestamp: "2023-05-15T14:30:00Z",
+                    },
+                    {
+                        sender: "Bob",
+                        content:
+                            "Sounds good, I'll bring the project documents.",
+                        timestamp: "2023-05-15T14:32:00Z",
+                    },
+                ],
             };
 
             setMessages((prev) => [...prev, botMessage]);
-        }, 1000);
+            setIsTyping(false);
+        }, 1500);
     };
 
-    // const getConfidenceColor = (confidence?: number) => {
-    //     if (confidence === undefined) return "bg-gray-100 text-gray-800";
-    //     if (confidence >= 0.8) return "bg-green-100 text-green-800";
-    //     if (confidence >= 0.5) return "bg-yellow-100 text-yellow-800";
-    //     return "bg-red-100 text-red-800";
-    // };
+    const getConfidenceColor = (confidence?: number) => {
+        if (confidence === undefined) return "bg-gray-100 text-gray-800";
+        if (confidence >= 0.8) return "bg-green-100 text-green-800";
+        if (confidence >= 0.5) return "bg-yellow-100 text-yellow-800";
+        return "bg-red-100 text-red-800";
+    };
 
-    // const formatConfidence = (confidence?: number) => {
-    //     if (confidence === undefined) return "N/A";
-    //     return `${Math.round(confidence * 100)}%`;
-    // };
+    const formatConfidence = (confidence?: number) => {
+        if (confidence === undefined) return "N/A";
+        return `${Math.round(confidence * 100)}%`;
+    };
 
     return (
-        <Card className="w-full h-[600px] flex flex-col">
-            <CardHeader>
-                <div className="flex items-center gap-2">
-                    <Bot className="h-5 w-5 text-primary" />
-                    <CardTitle>Chat with Your Data (Dummy)</CardTitle>
+        <Card className="w-full h-[600px] flex flex-col shadow-md border-primary/10">
+            <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8 bg-primary/20">
+                            <AvatarFallback>
+                                <Bot className="h-4 w-4 text-primary" />
+                            </AvatarFallback>
+                        </Avatar>
+                        <div>
+                            <CardTitle className="text-lg">
+                                {chatName || "Chat with Your Data"}
+                            </CardTitle>
+                            <CardDescription className="text-xs">
+                                {chatId
+                                    ? `Chat ID: ${chatId.substring(0, 8)}...`
+                                    : "New conversation"}
+                            </CardDescription>
+                        </div>
+                    </div>
+                    {chatId && onDeleteChat && (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => onDeleteChat(chatId)}
+                                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Delete this chat</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
                 </div>
-                <CardDescription>
-                    This is a placeholder interface. Real functionality coming
-                    soon!
-                </CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 overflow-hidden p-0">
-                <ScrollArea className="h-[calc(600px-8rem)] px-4">
-                    <div className="space-y-4 pt-4 pb-4">
+            <CardContent className="flex-1 overflow-hidden p-0 border-t">
+                <ScrollArea className="h-[calc(600px-8rem)]">
+                    <div className="space-y-4 p-4">
                         {messages.map((message) => (
                             <div
                                 key={message.id}
@@ -139,14 +211,33 @@ const ChatInterface = () => {
                                             )}
                                         </AvatarFallback>
                                     </Avatar>
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-1">
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-2">
                                             <span className="text-sm font-medium">
                                                 {message.sender}
                                             </span>
                                             <span className="text-xs text-muted-foreground">
-                                                {message.timestamp.toLocaleTimeString()}
+                                                {message.timestamp.toLocaleTimeString(
+                                                    [],
+                                                    {
+                                                        hour: "2-digit",
+                                                        minute: "2-digit",
+                                                    }
+                                                )}
                                             </span>
+                                            {message.confidence !==
+                                                undefined && (
+                                                <Badge
+                                                    variant="outline"
+                                                    className={`text-xs ${getConfidenceColor(
+                                                        message.confidence
+                                                    )}`}
+                                                >
+                                                    {formatConfidence(
+                                                        message.confidence
+                                                    )}
+                                                </Badge>
+                                            )}
                                         </div>
 
                                         <div
@@ -160,23 +251,105 @@ const ChatInterface = () => {
                                                 {message.content}
                                             </p>
                                         </div>
+
+                                        {message.relevantMessages &&
+                                            message.relevantMessages.length >
+                                                0 && (
+                                                <div className="pl-2 border-l-2 border-primary/30 mt-2">
+                                                    <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                                                        <Link className="h-3 w-3" />
+                                                        Related messages:
+                                                    </p>
+                                                    <div className="space-y-2">
+                                                        {message.relevantMessages.map(
+                                                            (relMsg, idx) => (
+                                                                <div
+                                                                    key={idx}
+                                                                    className="bg-background border rounded-md p-2 text-xs"
+                                                                >
+                                                                    <div className="font-medium mb-1">
+                                                                        {
+                                                                            relMsg.sender
+                                                                        }
+                                                                    </div>
+                                                                    <p className="text-muted-foreground">
+                                                                        {
+                                                                            relMsg.content
+                                                                        }
+                                                                    </p>
+                                                                </div>
+                                                            )
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
                                     </div>
                                 </div>
                             </div>
                         ))}
+                        {isTyping && (
+                            <div className="flex justify-start">
+                                <div className="flex gap-3 max-w-[80%]">
+                                    <Avatar className="bg-secondary">
+                                        <AvatarFallback>
+                                            <Bot className="h-4 w-4" />
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div className="bg-muted rounded-lg p-3">
+                                        <div className="flex space-x-1">
+                                            <div className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce"></div>
+                                            <div
+                                                className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce"
+                                                style={{
+                                                    animationDelay: "0.2s",
+                                                }}
+                                            ></div>
+                                            <div
+                                                className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce"
+                                                style={{
+                                                    animationDelay: "0.4s",
+                                                }}
+                                            ></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                         <div ref={messagesEndRef} />
                     </div>
                 </ScrollArea>
             </CardContent>
-            <CardFooter className="border-t p-4">
+            <CardFooter className="border-t p-3">
                 <form onSubmit={handleSubmit} className="flex w-full gap-2">
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    className="shrink-0"
+                                >
+                                    <Paperclip className="h-4 w-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Attach file (coming soon)</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                     <Input
-                        placeholder="Type a message (dummy interface)"
+                        ref={inputRef}
+                        placeholder="Ask about your chat history..."
                         value={inputValue}
                         onChange={handleInputChange}
                         className="flex-1"
                     />
-                    <Button type="submit" disabled={!inputValue.trim()}>
+                    <Button
+                        type="submit"
+                        disabled={!inputValue.trim() || isTyping}
+                        className="shrink-0"
+                    >
                         <Send className="h-4 w-4" />
                     </Button>
                 </form>

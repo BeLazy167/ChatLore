@@ -122,7 +122,7 @@ async def semantic_search_stateless(request: SemanticSearchRequest):
     parser = request.messages
     
     # Initialize the search service
-    await temp_search_service.initialize(parser.messages)
+    await temp_search_service.initialize(parser)
     
     # Perform semantic search
     results = await temp_search_service.semantic_search(
@@ -132,16 +132,7 @@ async def semantic_search_stateless(request: SemanticSearchRequest):
         with_explanation=request.with_explanation
     )
     
-    # Convert to Pydantic models
-    return [
-        SearchResult(
-            message=result.message.dict(),
-            similarity=result.similarity,
-            context=MessageContext(**result.context),
-            explanation=result.explanation if request.with_explanation else None
-        )
-        for result in results
-    ]
+    return results
 
 @router.post("/similar", response_model=List[SearchResult])
 async def get_similar_messages_stateless(request: SimilarMessagesRequest):
@@ -152,20 +143,20 @@ async def get_similar_messages_stateless(request: SimilarMessagesRequest):
     # Create a temporary search service
     temp_search_service = SearchService()
     
-    # Create a parser from the provided messages
-    parser = request.messages
+    # Get the messages from the request
+    messages = request.messages
     
     # Initialize the search service
-    await temp_search_service.initialize(parser.messages)
+    await temp_search_service.initialize(messages)
     
-    # Get similar messages
-    results = await temp_search_service.get_similar_messages(
-        message_id=request.message_id,
+    # Perform semantic search using the message content directly
+    results = await temp_search_service.semantic_search(
+        query=request.message,
         min_similarity=request.min_similarity,
-        limit=request.limit
+        limit=request.limit,
+        with_explanation=True   
     )
     
-    # Convert to Pydantic models
     return [
         SearchResult(
             message=result.message.dict(),
@@ -174,7 +165,7 @@ async def get_similar_messages_stateless(request: SimilarMessagesRequest):
             explanation=None
         )
         for result in results
-        if result.message.dict()["content"] != parser.messages[request.message_id].content  # Exclude the query message
+        if result.message.dict()["content"] != request.message  # Exclude the query message if it matches exactly
     ]
 
 @router.post("/topics", response_model=List[TopicCluster])
@@ -187,10 +178,10 @@ async def get_topic_clusters_stateless(request: TopicClustersRequest):
     temp_search_service = SearchService()
     
     # Create a parser from the provided messages
-    parser = create_parser_from_messages(request.messages)
+    parser = request.messages
     
     # Initialize the search service
-    await temp_search_service.initialize(parser.messages)
+    await temp_search_service.initialize(parser)
     
     # Get topic clusters
     clusters = await temp_search_service.get_topic_clusters()

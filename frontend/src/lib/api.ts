@@ -73,7 +73,7 @@ export interface SearchResult {
     message: Message;
     similarity: number;
     context: MessageContext;
-    explanation?: string;
+    explanation?: string | null;
 }
 
 export interface SecurityFinding {
@@ -278,6 +278,22 @@ export const api = {
         ): Promise<SearchResult[]> => {
             const response = await apiClient.post("/search/semantic", {
                 query,
+                messages,
+                min_similarity,
+                limit,
+                with_explanation,
+            });
+            return response.data;
+        },
+        similar: async (
+            message: string,
+            messages: Message[],
+            min_similarity: number = 0.3,
+            limit: number = 10,
+            with_explanation: boolean = false
+        ): Promise<SearchResult[]> => {
+            const response = await apiClient.post("/search/similar", {
+                message,
                 messages,
                 min_similarity,
                 limit,

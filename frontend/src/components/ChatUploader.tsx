@@ -71,45 +71,48 @@ export function ChatUploader({
         e.preventDefault();
 
         if (
-            fileInputRef.current?.files &&
-            fileInputRef.current.files.length > 0
+            !fileInputRef.current?.files ||
+            fileInputRef.current.files.length === 0
         ) {
-            const file = fileInputRef.current.files[0];
+            alert("Please select a file to upload");
+            return;
+        }
 
-            try {
-                // Read the file content
-                const reader = new FileReader();
-                reader.onload = async (event) => {
-                    if (event.target?.result) {
-                        const chatText = event.target.result as string;
+        const file = fileInputRef.current.files[0];
 
-                        // Use TanStack Query mutation to upload the file
-                        const response = await uploadChatMutation.mutateAsync(
-                            chatText
-                        );
+        try {
+            // Read the file content
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                if (event.target?.result) {
+                    const chatText = event.target.result as string;
 
-                        // Notify parent component about the new chat
-                        if (onChatUploaded && response) {
-                            // Handle the case where id might not exist directly
-                            const chatId =
-                                (response as ChatUploadResponse).id || "";
-                            onChatUploaded(chatId);
-                        }
+                    // Use TanStack Query mutation to upload the file
+                    const response = await uploadChatMutation.mutateAsync(
+                        chatText
+                    );
 
-                        // Reset form
-                        setFileName("");
-                        if (!selectedChatId) {
-                            setChatName("");
-                        }
-                        if (fileInputRef.current) {
-                            fileInputRef.current.value = "";
-                        }
+                    // Notify parent component about the new chat
+                    if (onChatUploaded && response) {
+                        // Handle the case where id might not exist directly
+                        const chatId =
+                            (response as ChatUploadResponse).id || "";
+                        onChatUploaded(chatId);
                     }
-                };
-                reader.readAsText(file);
-            } catch (error) {
-                console.error("Error uploading chat:", error);
-            }
+
+                    // Reset form
+                    setFileName("");
+                    if (!selectedChatId) {
+                        setChatName("");
+                    }
+                    if (fileInputRef.current) {
+                        fileInputRef.current.value = "";
+                    }
+                }
+            };
+            reader.readAsText(file);
+        } catch (error) {
+            console.error("Error uploading chat:", error);
         }
     };
 
@@ -167,7 +170,6 @@ export function ChatUploader({
                                         className="hidden"
                                         accept=".txt"
                                         onChange={handleFileChange}
-                                        required
                                     />
                                 </label>
                             </div>

@@ -117,7 +117,7 @@ class SemanticSearchRequest(BaseModel):
 
 class SimilarMessagesRequest(BaseModel):
     messages: List[MessageBase]
-    message_id: int
+    message: str
     min_similarity: float = Field(0.3, ge=0, le=1)
     limit: int = Field(10, ge=1, le=50)
 
@@ -176,7 +176,13 @@ class SecurityInsightsResponse(BaseModel):
 class SecurityInsightsRequest(BaseModel):
     messages: List[MessageBase]
 
-# New SecurityInsights2 models
+# Security Insights V2 models
+class SecurityInsight2(BaseModel):
+    title: str
+    description: str
+    severity: str
+    recommendations: List[str]
+
 class SecurityMetrics2(BaseModel):
     overallScore: float
     totalRisks: int
@@ -185,12 +191,6 @@ class SecurityMetrics2(BaseModel):
     mediumRiskCount: int
     lowRiskCount: int
     sensitiveDataByType: Dict[str, int]
-
-class SecurityInsight2(BaseModel):
-    title: str
-    description: str
-    severity: str
-    recommendations: List[str]
 
 class SecurityTrend2(BaseModel):
     type: str
@@ -203,6 +203,7 @@ class SecurityInsightsResponse2(BaseModel):
     metrics: SecurityMetrics2
     insights: List[SecurityInsight2]
     trends: List[SecurityTrend2]
+    recommendations: Optional[List[SecurityRecommendationDetail]] = None
 
 class SecurityInsightsRequest2(BaseModel):
     messages: List[MessageBase]

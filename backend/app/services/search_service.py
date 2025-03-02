@@ -178,18 +178,16 @@ class SearchService:
 
     async def get_similar_messages(
         self,
-        message_id: int,
+        message: str,
         min_similarity: float = 0.3,
         limit: int = 10
     ) -> List[SearchResult]:
         """Find messages similar to a specific message"""
-        if message_id < 0 or message_id >= len(self.messages):
-            return []
+        
 
-        target_message = self.messages[message_id]
+        target_message = message
         if target_message.message_type != "text":
             return []
-
         # Use the target message as query
         return await self.semantic_search(
             target_message.content,

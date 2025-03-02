@@ -101,4 +101,29 @@ export function useSearchSemanticStateless(
         },
     });
 }
+
+export function useSearchSimilarStateless(
+    message: string,
+    withExplanation: boolean,
+    minSimilarity: number,
+    resultLimit: number
+) {
+    return useMutation({
+        mutationKey: ["searchSimilar", message],
+        mutationFn: async () => {
+            const processedChat = localStorage.getItem("processed_chat");
+            if (!processedChat) {
+                return null;
+            }
+            return await api.search.similar(
+                message,
+                JSON.parse(processedChat),
+                minSimilarity,
+                resultLimit,
+                withExplanation
+            );
+        },
+    });
+}
+
 export { queryClient };

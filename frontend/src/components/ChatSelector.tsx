@@ -54,40 +54,50 @@ export function ChatSelector({
     const [chats, setChats] = useState<Chat[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
-    // Fetch chats when component mounts
+    // Fetch chats from localStorage when component mounts
     useEffect(() => {
-        fetchChats();
+        fetchChatsFromLocalStorage();
     }, []);
 
-    const fetchChats = async () => {
+    const fetchChatsFromLocalStorage = () => {
         setIsLoading(true);
         try {
-            // Replace with actual API call
-            const response = await fetch("/api/chats");
-            const data = await response.json();
-            setChats(data);
+            const storedChats = localStorage.getItem("chats");
+            if (storedChats) {
+                setChats(JSON.parse(storedChats));
+            } else {
+                setChats([]);
+            }
         } catch (error) {
-            console.error("Error fetching chats:", error);
+            console.error("Error fetching chats from localStorage:", error);
             setChats([]);
         } finally {
             setIsLoading(false);
         }
     };
 
-    const deleteChat = async (chatId: string) => {
+    const deleteChat = (chatId: string) => {
         try {
-            // Replace with actual API call
-            await fetch(`/api/chats/${chatId}`, {
-                method: "DELETE",
-            });
-            // Update local state after successful deletion
-            setChats(chats.filter((chat) => chat.id !== chatId));
+            // Get current chats from localStorage
+            const storedChats = localStorage.getItem("chats");
+            if (storedChats) {
+                const parsedChats = JSON.parse(storedChats);
+                // Filter out the chat to delete
+                const updatedChats = parsedChats.filter(
+                    (chat: Chat) => chat.id !== chatId
+                );
+                // Save back to localStorage
+                localStorage.setItem("chats", JSON.stringify(updatedChats));
+                // Update state
+                setChats(updatedChats);
+            }
+
             // If the deleted chat was selected, deselect it
             if (selectedChatId === chatId) {
                 onChatSelected("");
             }
         } catch (error) {
-            console.error("Error deleting chat:", error);
+            console.error("Error deleting chat from localStorage:", error);
         }
     };
 
@@ -95,14 +105,14 @@ export function ChatSelector({
         onChatSelected(chatId);
     };
 
-    const handleDeleteChat = async (chatId: string) => {
+    const handleDeleteChat = (chatId: string) => {
         setChatToDelete(chatId);
         setIsDeleteDialogOpen(true);
     };
 
-    const confirmDelete = async () => {
+    const confirmDelete = () => {
         if (chatToDelete) {
-            await deleteChat(chatToDelete);
+            deleteChat(chatToDelete);
             setIsDeleteDialogOpen(false);
             setChatToDelete(null);
         }

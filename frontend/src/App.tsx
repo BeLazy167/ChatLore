@@ -10,6 +10,7 @@ import { ContextAwareSearch } from "@/components/ContextAwareSearch";
 import { ChatSelector } from "@/components/ChatSelector";
 import "./App.css";
 import { ModeToggle } from "./components/mode-toggle";
+import { ChatInterface } from "./components/ChatInterface";
 
 export default function App() {
     const [activeTab, setActiveTab] = useState("upload");
@@ -209,7 +210,8 @@ export default function App() {
                         <TabsContent value="chat" className="p-4">
                             <div className="flex flex-col items-center justify-center p-8 text-center">
                                 <Bot className="h-12 w-12 text-muted-foreground mb-4" />
-                                <h3 className="text-xl font-semibold mb-2">
+                                <ChatInterface />
+                                <h3 className="text-xl font-semibold mb-2 mt-5">
                                     Chat Feature Disabled
                                 </h3>
                                 <p className="text-muted-foreground max-w-md">
