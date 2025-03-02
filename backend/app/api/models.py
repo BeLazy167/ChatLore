@@ -129,6 +129,17 @@ class ConversationInsightsRequest(BaseModel):
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
 
+class AnswerQuestionRequest(BaseModel):
+    messages: List[MessageBase]
+    question: str
+
+class AnswerQuestionResponse(BaseModel):
+    answer: str
+    status: str
+    error_type: Optional[str] = None
+    timestamp: datetime
+    question: str
+    message_count: int
 # Response models
 class ChatUploadResponse(BaseModel):
     message: str

@@ -290,4 +290,112 @@ class SearchService:
                     clusters[cluster_name] = []
                 clusters[cluster_name].append(message_indices[idx])
 
-        return clusters 
+        return clusters
+    
+    async def answer_question(self, question: str, messages: List[Message]) -> Dict[str, str]:
+        """Answer a question about the conversation using Gemini"""
+        if not messages:
+            return {
+                "answer": "No messages to analyze",
+                "status": "error",
+                "timestamp": datetime.now().isoformat(),
+                "question": question,
+                "message_count": len(messages)
+            }
+        
+        # Prepare conversation text
+        conversation_text = "\n".join([
+            f"{msg.sender}: {msg.content}"
+            for msg in messages
+            if msg.message_type == "text"
+        ])
+        
+        prompt = f"""
+        Answer the following question based on the conversation:
+        
+        Question: {question}
+        
+        Conversation:
+        {conversation_text}
+        
+        Provide a clear, concise answer with relevant details from the conversation.
+        """
+
+        # Add retry logic
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = await model.generate_content_async(prompt)
+                return {
+                    "answer": response.text,
+                    "status": "success",
+                    "timestamp": datetime.now().isoformat(),
+                    "question": question,
+                    "message_count": len(messages)
+                }
+            except Exception as e:
+                print(f"Error answering question (attempt {attempt+1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    # Add exponential backoff with jitter
+                    wait_time = (2 ** attempt) + random.random()
+                    print(f"Retrying in {wait_time:.2f} seconds...")
+                    time.sleep(wait_time)
+                else:
+                    # If all retries fail, return a friendly message with structured data
+                    error_message = "An unexpected error occurred."
+                    if "429" in str(e):
+                        error_message = "API rate limit exceeded. Please try again later."
+                    elif "404" in str(e):
+                        error_message = "The AI model is currently unavailable. Please check your API configuration."
+                    else:
+                        error_message = "Question answering failed. Please ensure you have a valid Gemini API key."
+                
+                    return {
+                        "answer": error_message,
+                        "status": "error",
+                        "error_type": str(e)[:100],
+                        "timestamp": datetime.now().isoformat(),
+                        "question": question,
+                        "message_count": len(messages)
+                    }
+    
+    async def get_conversation_summary(self, messages: List[Message]) -> str:
+        """Generate a summary of the conversation using Gemini"""
+        if not messages:
+            return "No messages to analyze"
+        
+        # Prepare conversation text
+        conversation_text = "\n".join([
+            f"{msg.sender}: {msg.content}"
+            for msg in messages
+            if msg.message_type == "text"
+        ])
+        
+        prompt = f"""
+        Generate a concise summary of the following conversation:
+        
+        Conversation:
+        {conversation_text}
+        """
+
+        # Add retry logic
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = await model.generate_content_async(prompt)
+                return response.text
+            except Exception as e:
+                print(f"Error generating summary (attempt {attempt+1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    # Add exponential backoff with jitter
+                    wait_time = (2 ** attempt) + random.random()
+                    print(f"Retrying in {wait_time:.2f} seconds...")
+                    time.sleep(wait_time)
+                else:
+                    # If all retries fail, return a friendly message
+                    if "429" in str(e):
+                        return "API rate limit exceeded. Please try again later."
+                    elif "404" in str(e):
+                        return "The AI model is currently unavailable. Please check your API configuration."
+                    else:
+                        return "Summary generation failed. Please ensure you have a valid Gemini API key."

@@ -11,7 +11,15 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { ScrollArea } from "./ui/scroll-area";
-import { Send, Bot, User, Paperclip, Trash2, Link } from "lucide-react";
+import {
+    Send,
+    Bot,
+    User,
+    Paperclip,
+    Trash2,
+    Link,
+    AlertCircle,
+} from "lucide-react";
 import { Badge } from "./ui/badge";
 import {
     Tooltip,
@@ -19,6 +27,9 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "./ui/tooltip";
+import { useAnswerQuestionStateless } from "../lib/queries";
+import { Loader2 } from "lucide-react";
+import { v4 as uuidv4 } from "uuid";
 
 interface ChatMessage {
     id: string;
@@ -26,6 +37,8 @@ interface ChatMessage {
     sender: string;
     timestamp: Date;
     isUser: boolean;
+    status?: "success" | "error";
+    error_type?: string;
     confidence?: number;
     relevantMessages?: Array<{
         sender: string;
@@ -55,11 +68,14 @@ const ChatInterface = ({
             isUser: false,
         },
     ]);
+
     const [inputValue, setInputValue] = useState("");
-    const [isTyping, setIsTyping] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [currentQuestion, setCurrentQuestion] = useState("");
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+    const { refetch, isError } = useAnswerQuestionStateless(currentQuestion);
 
     useEffect(() => {
         // Scroll to bottom whenever messages change
@@ -75,13 +91,12 @@ const ChatInterface = ({
         setInputValue(e.target.value);
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!inputValue.trim()) return;
+        if (!inputValue.trim() || isLoading) return;
 
-        // Add user message
         const userMessage: ChatMessage = {
-            id: Date.now().toString(),
+            id: uuidv4(),
             content: inputValue,
             sender: "You",
             timestamp: new Date(),
@@ -89,45 +104,58 @@ const ChatInterface = ({
         };
 
         setMessages((prev) => [...prev, userMessage]);
+        setCurrentQuestion(inputValue);
         setInputValue("");
-        setIsTyping(true);
+        setIsLoading(true);
 
-        // Simulate response
-        setTimeout(() => {
+        try {
+            const result = await refetch();
+
+            if (isError || !result.data) {
+                throw new Error("Failed to get answer");
+            }
+
+            const response = result.data as { answer?: string } | string;
+
+            const responseContent =
+                typeof response === "string"
+                    ? response
+                    : response?.answer ||
+                      "Sorry, I couldn't process your request.";
+
             const botMessage: ChatMessage = {
-                id: (Date.now() + 1).toString(),
-                content:
-                    "I found some relevant information in your chat history. Let me analyze that for you...",
+                id: uuidv4(),
+                content: responseContent,
                 sender: "ChatLore",
                 timestamp: new Date(),
                 isUser: false,
-                confidence: 0.85,
-                relevantMessages: [
-                    {
-                        sender: "Alice",
-                        content:
-                            "Let's meet tomorrow at 2pm at the coffee shop.",
-                        timestamp: "2023-05-15T14:30:00Z",
-                    },
-                    {
-                        sender: "Bob",
-                        content:
-                            "Sounds good, I'll bring the project documents.",
-                        timestamp: "2023-05-15T14:32:00Z",
-                    },
-                ],
+                status: "success",
             };
 
             setMessages((prev) => [...prev, botMessage]);
-            setIsTyping(false);
-        }, 1500);
+        } catch (error) {
+            const errorMessage: ChatMessage = {
+                id: uuidv4(),
+                content:
+                    "Sorry, I couldn't process your request. Please try again later.",
+                sender: "ChatLore",
+                timestamp: new Date(),
+                isUser: false,
+                status: "error",
+                error_type:
+                    error instanceof Error ? error.message : "Unknown error",
+            };
+
+            setMessages((prev) => [...prev, errorMessage]);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const getConfidenceColor = (confidence?: number) => {
-        if (confidence === undefined) return "bg-gray-100 text-gray-800";
-        if (confidence >= 0.8) return "bg-green-100 text-green-800";
-        if (confidence >= 0.5) return "bg-yellow-100 text-yellow-800";
-        return "bg-red-100 text-red-800";
+    const getStatusColor = (status?: string) => {
+        if (status === "success") return "bg-green-100 text-green-800";
+        if (status === "error") return "bg-red-100 text-red-800";
+        return "bg-gray-100 text-gray-800";
     };
 
     const formatConfidence = (confidence?: number) => {
@@ -225,13 +253,21 @@ const ChatInterface = ({
                                                     }
                                                 )}
                                             </span>
+                                            {message.status && (
+                                                <Badge
+                                                    variant="outline"
+                                                    className={`text-xs ${getStatusColor(
+                                                        message.status
+                                                    )}`}
+                                                >
+                                                    {message.status}
+                                                </Badge>
+                                            )}
                                             {message.confidence !==
                                                 undefined && (
                                                 <Badge
                                                     variant="outline"
-                                                    className={`text-xs ${getConfidenceColor(
-                                                        message.confidence
-                                                    )}`}
+                                                    className="text-xs bg-blue-100 text-blue-800"
                                                 >
                                                     {formatConfidence(
                                                         message.confidence
@@ -244,12 +280,28 @@ const ChatInterface = ({
                                             className={`rounded-lg p-3 ${
                                                 message.isUser
                                                     ? "bg-primary text-primary-foreground"
+                                                    : message.status === "error"
+                                                    ? "bg-red-50 border border-red-200"
                                                     : "bg-muted"
                                             }`}
                                         >
+                                            {message.status === "error" &&
+                                                !message.isUser && (
+                                                    <div className="flex items-center gap-2 mb-2 text-red-600">
+                                                        <AlertCircle className="h-4 w-4" />
+                                                        <span className="text-xs font-medium">
+                                                            Error
+                                                        </span>
+                                                    </div>
+                                                )}
                                             <p className="text-sm whitespace-pre-wrap">
                                                 {message.content}
                                             </p>
+                                            {message.error_type && (
+                                                <p className="text-xs text-red-500 mt-2">
+                                                    {message.error_type}
+                                                </p>
+                                            )}
                                         </div>
 
                                         {message.relevantMessages &&
@@ -287,7 +339,7 @@ const ChatInterface = ({
                                 </div>
                             </div>
                         ))}
-                        {isTyping && (
+                        {isLoading && (
                             <div className="flex justify-start">
                                 <div className="flex gap-3 max-w-[80%]">
                                     <Avatar className="bg-secondary">
@@ -296,20 +348,11 @@ const ChatInterface = ({
                                         </AvatarFallback>
                                     </Avatar>
                                     <div className="bg-muted rounded-lg p-3">
-                                        <div className="flex space-x-1">
-                                            <div className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce"></div>
-                                            <div
-                                                className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce"
-                                                style={{
-                                                    animationDelay: "0.2s",
-                                                }}
-                                            ></div>
-                                            <div
-                                                className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce"
-                                                style={{
-                                                    animationDelay: "0.4s",
-                                                }}
-                                            ></div>
+                                        <div className="flex items-center gap-2">
+                                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                            <p className="text-sm text-muted-foreground">
+                                                Thinking...
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
@@ -347,10 +390,14 @@ const ChatInterface = ({
                     />
                     <Button
                         type="submit"
-                        disabled={!inputValue.trim() || isTyping}
+                        disabled={!inputValue.trim() || isLoading}
                         className="shrink-0"
                     >
-                        <Send className="h-4 w-4" />
+                        {isLoading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                            <Send className="h-4 w-4" />
+                        )}
                     </Button>
                 </form>
             </CardFooter>

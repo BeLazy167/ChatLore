@@ -301,6 +301,16 @@ export const api = {
             });
             return response.data;
         },
+        answerQuestion: async (
+            question: string,
+            messages: Message[]
+        ): Promise<string> => {
+            const response = await apiClient.post("/search/answer", {
+                question,
+                messages,
+            });
+            return response.data;
+        },
 
         // getTopicClusters: async (
         //     messages: Message[]

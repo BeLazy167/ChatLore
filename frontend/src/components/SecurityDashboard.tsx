@@ -32,8 +32,6 @@ import {
     ResponsiveContainer,
 } from "recharts";
 import { ScrollArea } from "./ui/scroll-area";
-import { Button } from "./ui/button";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "./ui/hover-card";
 import { SecurityInsightItem } from "@/lib/api";
 import { useSecurityInsightsStateless } from "@/lib/queries";
 
@@ -74,14 +72,6 @@ interface SensitiveDataDetailsProps {
     };
 }
 
-interface Recommendation {
-    title: string;
-    priority: string;
-    impact: string;
-    description: string;
-    steps: string[];
-}
-
 const SecurityDashboard = () => {
     const { data, isPending, error } = useSecurityInsightsStateless();
     const [selectedCategory, setSelectedCategory] = useState<string | null>(
@@ -92,7 +82,7 @@ const SecurityDashboard = () => {
     if (error) return <ErrorState error={error} />;
     if (!data) return <EmptyState />;
 
-    const { insights, metrics, sensitiveData, trends, recommendations } = data;
+    const { insights, metrics, sensitiveData, trends } = data;
 
     const getDataTypeIcon = (type: string) => {
         const iconMap: Record<string, React.ReactNode> = {
@@ -132,14 +122,11 @@ const SecurityDashboard = () => {
             </CardHeader>
             <CardContent>
                 <Tabs defaultValue="overview">
-                    <TabsList className="grid w-full grid-cols-4">
+                    <TabsList className="grid w-full grid-cols-3">
                         <TabsTrigger value="overview">Overview</TabsTrigger>
                         <TabsTrigger value="findings">Findings</TabsTrigger>
                         <TabsTrigger value="sensitive">
                             Sensitive Data
-                        </TabsTrigger>
-                        <TabsTrigger value="recommendations">
-                            Recommendations
                         </TabsTrigger>
                     </TabsList>
 
@@ -266,19 +253,6 @@ const SecurityDashboard = () => {
                                 />
                             )}
                         </div>
-                    </TabsContent>
-
-                    <TabsContent value="recommendations">
-                        <ScrollArea className="h-[600px] pr-4">
-                            <div className="space-y-4">
-                                {recommendations.map((rec, index) => (
-                                    <RecommendationCard
-                                        key={index}
-                                        recommendation={rec}
-                                    />
-                                ))}
-                            </div>
-                        </ScrollArea>
                     </TabsContent>
                 </Tabs>
             </CardContent>
@@ -548,52 +522,6 @@ const SensitiveDataDetails = ({
                         {ex}
                     </code>
                 ))}
-            </div>
-        </CardContent>
-    </Card>
-);
-
-const RecommendationCard = ({
-    recommendation,
-}: {
-    recommendation: Recommendation;
-}) => (
-    <Card>
-        <CardHeader>
-            <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">
-                    {recommendation.title}
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="capitalize">
-                        {recommendation.priority} priority
-                    </Badge>
-                    <HoverCard>
-                        <HoverCardTrigger>
-                            <Button variant="ghost" size="sm">
-                                <Info className="h-4 w-4" />
-                            </Button>
-                        </HoverCardTrigger>
-                        <HoverCardContent>
-                            <p className="text-sm">{recommendation.impact}</p>
-                        </HoverCardContent>
-                    </HoverCard>
-                </div>
-            </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-                {recommendation.description}
-            </p>
-            <div>
-                <h4 className="font-medium mb-2">Implementation Steps</h4>
-                <ul className="list-decimal pl-4 space-y-2">
-                    {recommendation.steps.map((step: string, idx: number) => (
-                        <li key={idx} className="text-sm text-muted-foreground">
-                            {step}
-                        </li>
-                    ))}
-                </ul>
             </div>
         </CardContent>
     </Card>

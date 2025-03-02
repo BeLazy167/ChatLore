@@ -52,8 +52,24 @@ export function useSecurityAnalysisStateless() {
     });
 }
 
-//this is for das
-
+export function useAnswerQuestionStateless(question: string) {
+    return useQuery({
+        queryKey: ["answerQuestion", question],
+        queryFn: async () => {
+            const chatNames = JSON.parse(
+                localStorage.getItem("chat_names") || "[]"
+            );
+            const processedChat = localStorage.getItem(chatNames[0]);
+            if (!processedChat) {
+                return null;
+            }
+            return await api.search.answerQuestion(
+                question,
+                JSON.parse(processedChat)
+            );
+        },
+    });
+}
 export function useSecurityInsightsStateless() {
     return useQuery({
         queryKey: ["securityInsights"],

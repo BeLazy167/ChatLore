@@ -21,7 +21,9 @@ from app.api.models import (
     SemanticSearchRequest,
     SimilarMessagesRequest,
     TopicClustersRequest,
-    ConversationInsightsRequest
+    ConversationInsightsRequest,
+    AnswerQuestionRequest,
+    AnswerQuestionResponse
 )
 
 router = APIRouter()
@@ -249,3 +251,32 @@ async def get_conversation_insights_stateless(request: ConversationInsightsReque
         insights=insights.get("insights", "No insights available"),
         timestamp=insights.get("timestamp", datetime.now().isoformat())
     ) 
+    
+    
+    
+@router.post("/answer", response_model=str)
+async def answer_question_stateless(request: AnswerQuestionRequest):
+    """
+    Answer a question about the conversation.
+    (Stateless approach)
+    """ 
+    # Create a temporary search service
+    temp_search_service = SearchService()
+    
+    # Create a parser from the provided messages
+    parser = request.messages
+    
+    # Initialize the search     
+    await temp_search_service.initialize(parser)
+    
+    # Answer the question
+    response = await temp_search_service.answer_question(request.question, parser)
+    
+    # Extract just the answer string from the response dictionary
+    if isinstance(response, dict) and "answer" in response:
+        return response["answer"]
+    
+    # Fallback in case response is not a dictionary or doesn't have an answer key
+    return str(response)
+    
+    

@@ -191,17 +191,9 @@ export default function App() {
                         </TabsContent>
 
                         <TabsContent value="chat" className="p-4">
-                            <div className="flex flex-col items-center justify-center p-8 text-center">
-                                <Bot className="h-12 w-12 text-muted-foreground mb-4" />
+                                <div className="flex flex-col items-center justify-center p-8 text-center">
+                                {/* <Bot className="h-12 w-12 text-muted-foreground mb-4" /> */}
                                 <ChatInterface />
-                                <h3 className="text-xl font-semibold mb-2 mt-5">
-                                    Chat Feature Disabled
-                                </h3>
-                                <p className="text-muted-foreground max-w-md">
-                                    The chat interface is currently disabled.
-                                    Please check back later when this feature
-                                    becomes available.
-                                </p>
                             </div>
                         </TabsContent>
                     </Tabs>

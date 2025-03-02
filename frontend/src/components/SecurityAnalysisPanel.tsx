@@ -160,12 +160,9 @@ export function SecurityAnalysisPanel() {
                     value={selectedTab}
                     onValueChange={setSelectedTab}
                 >
-                    <TabsList className="grid grid-cols-3 mb-4">
+                    <TabsList className="grid grid-cols-2 mb-4">
                         <TabsTrigger value="overview">Overview</TabsTrigger>
                         <TabsTrigger value="findings">Findings</TabsTrigger>
-                        <TabsTrigger value="recommendations">
-                            Recommendations
-                        </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="overview">
@@ -317,84 +314,6 @@ export function SecurityAnalysisPanel() {
                                         <AlertDescription>
                                             No security issues were detected in
                                             this conversation.
-                                        </AlertDescription>
-                                    </Alert>
-                                )}
-                            </div>
-                        </ScrollArea>
-                    </TabsContent>
-
-                    <TabsContent value="recommendations">
-                        <ScrollArea className="h-[600px] pr-4">
-                            <div className="space-y-4">
-                                {securityAnalysis.recommendations.map(
-                                    (rec, index) => (
-                                        <Card key={index}>
-                                            <CardHeader>
-                                                <div className="flex items-center justify-between">
-                                                    <CardTitle className="text-lg">
-                                                        {rec.title}
-                                                    </CardTitle>
-                                                    {rec.priority && (
-                                                        <Badge
-                                                            className={getSeverityBadge(
-                                                                rec.priority
-                                                            )}
-                                                        >
-                                                            {rec.priority}
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <div className="space-y-4">
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {rec.description}
-                                                    </p>
-                                                    {rec.steps &&
-                                                        rec.steps.length >
-                                                            0 && (
-                                                            <div>
-                                                                <h4 className="font-medium mb-2">
-                                                                    Steps
-                                                                </h4>
-                                                                <ul className="list-disc pl-4 space-y-2">
-                                                                    {rec.steps.map(
-                                                                        (
-                                                                            step,
-                                                                            idx
-                                                                        ) => (
-                                                                            <li
-                                                                                key={
-                                                                                    idx
-                                                                                }
-                                                                                className="text-sm text-muted-foreground"
-                                                                            >
-                                                                                {
-                                                                                    step
-                                                                                }
-                                                                            </li>
-                                                                        )
-                                                                    )}
-                                                                </ul>
-                                                            </div>
-                                                        )}
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    )
-                                )}
-
-                                {securityAnalysis.recommendations.length ===
-                                    0 && (
-                                    <Alert>
-                                        <Info className="h-4 w-4" />
-                                        <AlertTitle>
-                                            No Recommendations
-                                        </AlertTitle>
-                                        <AlertDescription>
-                                            No security recommendations are
-                                            available for this conversation.
                                         </AlertDescription>
                                     </Alert>
                                 )}
