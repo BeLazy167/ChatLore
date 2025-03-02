@@ -1,6 +1,6 @@
 # ChatLore: Privacy-First Chat Analysis Platform
 
-![ChatLore Logo](docs/images/chatlore_logo.png)
+![ChatLore Logo](https://imgur.com/a/6Cg6xJL)
 
 **ChatLore** is a privacy-focused platform that helps users understand, protect, and gain insights from their personal messaging data. Built for the MLH Hackathon, ChatLore addresses the critical need for privacy and security in our digital conversations.
 
