@@ -1,8 +1,8 @@
 import axios from "axios";
 
 // API base URL - change this to your production URL when deploying
-const API_BASE_URL = "http://localhost:8000/api";
-
+const API_BASE_URL =
+    (import.meta.env.VITE_API_BASE_URL as string) || "http://localhost:8000";
 // Create axios instance with default config
 const apiClient = axios.create({
     baseURL: API_BASE_URL,

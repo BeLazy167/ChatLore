@@ -58,42 +58,51 @@ export default function App() {
                     </Card>
 
                     <Tabs value={activeTab} onValueChange={setActiveTab}>
-                        <TabsList className="grid w-full grid-cols-5">
+                        <TabsList className="flex flex-wrap w-full overflow-x-auto">
                             <TabsTrigger
                                 value="upload"
-                                className="flex items-center gap-2"
+                                className="flex items-center gap-1 flex-1"
                             >
                                 <Upload className="h-4 w-4" />
-                                <span>Upload Chat</span>
-                            </TabsTrigger>
-                            <TabsTrigger
-                                value="security"
-                                className="flex items-center gap-2"
-                            >
-                                <Shield className="h-4 w-4" />
-                                <span>Security</span>
-                            </TabsTrigger>
-                            <TabsTrigger
-                                value="threads"
-                                className="flex items-center gap-2"
-                                disabled
-                            >
-                                <MessageCircle className="h-4 w-4" />
-                                <span>Threads (Coming Soon)</span>
-                            </TabsTrigger>
-                            <TabsTrigger
-                                value="search"
-                                className="flex items-center gap-2"
-                            >
-                                <Search className="h-4 w-4" />
-                                <span>Search</span>
+                                <span className="text-xs sm:text-sm">
+                                    Upload
+                                </span>
                             </TabsTrigger>
                             <TabsTrigger
                                 value="chat"
-                                className="flex items-center gap-2"
+                                className="flex items-center gap-1 flex-1"
                             >
                                 <Bot className="h-4 w-4" />
-                                <span>Chat</span>
+                                <span className="text-xs sm:text-sm">Chat</span>
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="security"
+                                className="flex items-center gap-1 flex-1"
+                            >
+                                <Shield className="h-4 w-4" />
+                                <span className="text-xs sm:text-sm">
+                                    Security
+                                </span>
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="search"
+                                className="flex items-center gap-1 flex-1"
+                            >
+                                <Search className="h-4 w-4" />
+                                <span className="text-xs sm:text-sm">
+                                    Search
+                                </span>
+                            </TabsTrigger>
+
+                            <TabsTrigger
+                                value="threads"
+                                className="flex items-center gap-1 flex-1"
+                                disabled
+                            >
+                                <MessageCircle className="h-4 w-4" />
+                                <span className="text-xs sm:text-sm">
+                                    Threads
+                                </span>
                             </TabsTrigger>
                         </TabsList>
 
