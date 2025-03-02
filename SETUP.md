@@ -92,7 +92,7 @@ VITE_API_BASE_URL=http://localhost:8000
 npm run dev
 ```
 
-The frontend will be available at http://localhost:3000.
+The frontend will be available at http://localhost:5173.
 
 ## Docker Setup (Alternative)
 
@@ -107,7 +107,7 @@ docker-compose up -d
 
 2. **Access the application:**
 
-Open your browser to http://localhost:3000.
+Open your browser to http://localhost:5173.
 
 ## Verifying the Installation
 
