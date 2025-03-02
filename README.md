@@ -1,6 +1,6 @@
 # ChatLore: Privacy-First Chat Analysis Platform
 
-![ChatLore Logo](https://imgur.com/a/6Cg6xJL)
+![ChatLore Logo](https://i.postimg.cc/W1Jxyb1T/image.png)
 
 **ChatLore** is a privacy-focused platform that helps users understand, protect, and gain insights from their personal messaging data. Built for the MLH Hackathon, ChatLore addresses the critical need for privacy and security in our digital conversations.
 
@@ -28,9 +28,9 @@
 
 ![ChatLore Demo](docs/images/chatlore_demo.gif)
 
-## 🏆 Hackathon Context
+## 🏆 HenHacks2025 Hackathon Context
 
-ChatLore was developed for the MLH Hackathon with a focus on privacy and security in digital communications. Our team identified that while messaging apps are increasingly central to our lives, they lack robust tools for users to understand and protect their sensitive information.
+ChatLore was developed for the HenHack MLH Hackathon with a focus on privacy and security in digital communications. Our team identified that while messaging apps are increasingly central to our lives, they lack robust tools for users to understand and protect their sensitive information.
 
 ### Problem Statement
 
@@ -123,10 +123,10 @@ Developing heuristics and models to identify security risks in conversational da
 
 ## 👥 Team
 
--   [Team Member 1] - Role
--   [Team Member 2] - Role
--   [Team Member 3] - Role
--   [Team Member 4] - Role
+-   Dhruv Khara 
+-   Meet Bhanushali
+
+
 
 ## 📄 License
 

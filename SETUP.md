@@ -92,36 +92,7 @@ VITE_API_BASE_URL=http://localhost:8000
 npm run dev
 ```
 
-The frontend will be available at http://localhost:3000.
-
-## Docker Setup (Alternative)
-
-If you prefer to use Docker:
-
-1. **Build and start the containers:**
-
-```bash
-cd chatlore
-docker-compose up -d
-```
-
-2. **Access the application:**
-
-Open your browser to http://localhost:3000.
-
-## Verifying the Installation
-
-To verify that your installation is working correctly:
-
-1. Open your browser to http://localhost:3000
-2. Click on "New Chat" to create a new chat
-3. Upload the sample WhatsApp chat file from `demo_data/whatsapp_demo_chat.txt`
-4. Wait for the processing to complete
-5. Explore the features:
-    - View the sensitive data detection
-    - Check the security insights
-    - Try searching for specific information
-    - Ask questions about the chat content
+The frontend will be available at http://localhost:5173.
 
 ## Sample Queries to Test
 
