@@ -134,4 +134,44 @@ class ChatUploadResponse(BaseModel):
     message: str
     total_messages: int
     statistics: Dict
+    messages: List[MessageBase]
+
+class SecurityInsightItem(BaseModel):
+    title: str
+    description: str
+    severity: str
+    impact: str
+    recommendations: List[str]
+    examples: Optional[List[str]] = None
+
+class SecurityMetrics(BaseModel):
+    securityScore: float
+    totalFindings: int
+    criticalCount: int
+    highCount: int
+    sensitiveDataCount: int
+
+class SensitiveDataItem(BaseModel):
+    count: int
+    examples: List[str]
+
+class SecurityTrend(BaseModel):
+    category: str
+    count: int
+
+class SecurityRecommendationDetail(BaseModel):
+    title: str
+    description: str
+    impact: str
+    priority: str
+    steps: List[str]
+
+class SecurityInsightsResponse(BaseModel):
+    insights: List[SecurityInsightItem]
+    metrics: SecurityMetrics
+    sensitiveData: Dict[str, SensitiveDataItem]
+    trends: List[SecurityTrend]
+    recommendations: List[SecurityRecommendationDetail]
+
+class SecurityInsightsRequest(BaseModel):
     messages: List[MessageBase] 
