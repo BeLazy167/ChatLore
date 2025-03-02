@@ -1,0 +1,53 @@
++---------------------------------------------------+
+|                  ChatLore Architecture                |
++---------------------------------------------------+
+
++---------------------------------------------------+
+|                 Presentation Layer                 |
+|  +---------------+  +---------------+  +--------+  |
+|  | Chat Interface|  |Security Panel |  |Data View|  |
+|  +---------------+  +---------------+  +--------+  |
++--------------------------|---------------------------+
+                           |
+                           v
++---------------------------------------------------+
+|                    Query Layer                     |
+|  +---------------+  +---------------+  +--------+  |
+|  |Semantic Search|  |Question Answer|  |Context  |  |
+|  +---------------+  +---------------+  +--------+  |
++--------------------------|---------------------------+
+                           |
+                           v
++---------------------------------------------------+
+|                   Context Engine                   |
+|  +---------------+  +---------------+  +--------+  |
+|  |Vector Database|  |Semantic Models|  |Threading|  |
+|  +---------------+  +---------------+  +--------+  |
++--------------------------|---------------------------+
+                           |
+                           v
++---------------------------------------------------+
+|                   Analysis Layer                   |
+|  +---------------+  +---------------+  +--------+  |
+|  |Sensitive Data |  |Security Risk  |  |Pattern  |  |
+|  |Detection      |  |Analysis       |  |Analysis |  |
+|  +---------------+  +---------------+  +--------+  |
++--------------------------|---------------------------+
+                           |
+                           v
++---------------------------------------------------+
+|                Data Processing Layer               |
+|  +---------------+  +---------------+  +--------+  |
+|  |WhatsApp Parser|  |Data Validation|  |Message  |  |
+|  |               |  |               |  |Normalize|  |
+|  +---------------+  +---------------+  +--------+  |
++---------------------------------------------------+
+
+Data Flow:
+1. Chat data uploaded by user
+2. Parsed and normalized by Data Processing Layer
+3. Analyzed for sensitive data and security risks
+4. Converted to vector embeddings for semantic search
+5. Context engine builds understanding of conversation threads
+6. Query layer enables semantic search and question answering
+7. Results presented to user through intuitive interface 
