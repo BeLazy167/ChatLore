@@ -174,7 +174,7 @@ export const mockSecurityInsights = {
 
 // Search Results Mock Data
 export const generateMockSearchResults = (query: string) => ({
-    results: Array.from({ length: 5 }, (_, i) => ({
+    results: Array.from({ length: 5 }, () => ({
         id: faker.string.uuid(),
         content: faker.lorem.paragraph(),
         sender: faker.person.fullName(),
@@ -182,7 +182,6 @@ export const generateMockSearchResults = (query: string) => ({
         relevanceScore: faker.number.float({
             min: 0.5,
             max: 1,
-            precision: 0.01,
         }),
         aiExplanation: `This message is relevant because it ${faker.lorem
             .sentence()
@@ -205,7 +204,7 @@ export const generateMockSearchResults = (query: string) => ({
 });
 
 // Context Analysis Mock Data
-export const generateMockContextAnalysis = (messageIds: string[]) => ({
+export const generateMockContextAnalysis = () => ({
     summary: faker.lorem.paragraph(),
     topics: Array.from({ length: 4 }, () => faker.lorem.word()),
     sentiment: faker.helpers.arrayElement(["positive", "negative", "neutral"]),
@@ -222,7 +221,7 @@ export const generateMockContextAnalysis = (messageIds: string[]) => ({
 });
 
 // Gemini Insights Mock Data
-export const generateMockGeminiInsights = (text: string) => ({
+export const generateMockGeminiInsights = () => ({
     summary: faker.lorem.paragraph(),
     insights: Array.from({ length: 3 }, () => faker.lorem.sentence()),
     recommendations: Array.from({ length: 3 }, () => faker.lorem.sentence()),
