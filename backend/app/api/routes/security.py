@@ -182,7 +182,7 @@ async def get_security_insights(request: SecurityInsightsRequest):
                 "Use secure channels for sharing email addresses",
                 "Consider using masked or temporary email addresses"
             ],
-            examples=all_sensitive_data["email"][:3]  # Show up to 3 examples
+            examples=all_sensitive_data["email"]  # Show all emails
         ))
     
     # Phone number insight
@@ -197,7 +197,7 @@ async def get_security_insights(request: SecurityInsightsRequest):
                 "Use messaging apps that don't require phone number sharing",
                 "Consider using temporary phone numbers for sensitive communications"
             ],
-            examples=all_sensitive_data["phone"][:3]  # Show up to 3 examples
+            examples=all_sensitive_data["phone"]  # Show all phone numbers
         ))
     
     # Credit card insight
@@ -212,13 +212,13 @@ async def get_security_insights(request: SecurityInsightsRequest):
                 "Never share credit card details through chat",
                 "Use secure payment methods instead of sharing card details"
             ],
-            examples=all_sensitive_data["credit_card"][:2]  # Show up to 2 examples
+            examples=all_sensitive_data["credit_card"]  # Show all credit card info
         ))
     
     # Location insight
     if ("location" in all_sensitive_data or "address" in all_sensitive_data) and \
        (len(all_sensitive_data.get("location", [])) > 0 or len(all_sensitive_data.get("address", [])) > 0):
-        location_examples = all_sensitive_data.get("location", [])[:2] + all_sensitive_data.get("address", [])[:2]
+        location_examples = all_sensitive_data.get("location", []) + all_sensitive_data.get("address", [])  # Show all locations
         insights.append(SecurityInsightItem(
             title="Location Information Exposure",
             description="Location details were found in the conversation",
@@ -229,7 +229,7 @@ async def get_security_insights(request: SecurityInsightsRequest):
                 "Use general area names instead of specific addresses",
                 "Be cautious about sharing meeting locations publicly"
             ],
-            examples=location_examples[:3]  # Show up to 3 examples
+            examples=location_examples  # Show all locations
         ))
     
     # URL insight
@@ -244,7 +244,7 @@ async def get_security_insights(request: SecurityInsightsRequest):
                 "Use URL preview features to check destinations",
                 "Be cautious with shortened URLs"
             ],
-            examples=all_sensitive_data["url"][:3]  # Show up to 3 examples
+            examples=all_sensitive_data["url"]  # Show all URLs
         ))
     
     # Prepare sensitive data for response
@@ -252,7 +252,7 @@ async def get_security_insights(request: SecurityInsightsRequest):
     for data_type, values in all_sensitive_data.items():
         sensitive_data_response[data_type] = SensitiveDataItem(
             count=len(values),
-            examples=values[:3]  # Show up to 3 examples
+            examples=values  # Show all values instead of limiting to 3
         )
     
     # Calculate metrics
