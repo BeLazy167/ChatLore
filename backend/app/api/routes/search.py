@@ -7,14 +7,14 @@ from collections import Counter
 import math
 from typing import List, Dict, Optional
 from app.core.whatsapp_parser import WhatsAppParser, Message
-from app.api.dependencies import create_parser_from_messages
+
 from app.services.search_service import SearchService
 from datetime import datetime, timedelta
 from app.api.models import (
     MessageBase,
     MessageContext,
     SearchResult,
-    TimeContext,
+    TimeContext,    
     ContextResponse,
     TopicCluster,
     ConversationInsights,
@@ -119,7 +119,7 @@ async def semantic_search_stateless(request: SemanticSearchRequest):
     temp_search_service = SearchService()
     
     # Create a parser from the provided messages
-    parser = create_parser_from_messages(request.messages)
+    parser = request.messages
     
     # Initialize the search service
     await temp_search_service.initialize(parser.messages)
@@ -153,7 +153,7 @@ async def get_similar_messages_stateless(request: SimilarMessagesRequest):
     temp_search_service = SearchService()
     
     # Create a parser from the provided messages
-    parser = create_parser_from_messages(request.messages)
+    parser = request.messages
     
     # Initialize the search service
     await temp_search_service.initialize(parser.messages)
