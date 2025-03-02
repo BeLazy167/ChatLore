@@ -20,9 +20,14 @@ from app.api.models import (
     SecurityMetrics,
     SensitiveDataItem,
     SecurityTrend,
-    SecurityRecommendationDetail
+    SecurityRecommendationDetail,
+    SecurityInsightsRequest2,
+    SecurityInsightsResponse2,
+    SecurityMetrics2,
+    SecurityInsight2,
+    SecurityTrend2
 )
-from datetime import datetime
+from datetime import datetime, timedelta
 import random
 
 router = APIRouter()
@@ -337,4 +342,224 @@ async def get_security_insights(request: SecurityInsightsRequest):
         sensitiveData=sensitive_data_response,
         trends=trends,
         recommendations=recommendations
+    )
+
+@router.post("/security-insight-2", response_model=SecurityInsightsResponse2)
+async def get_security_insights_v2(request: SecurityInsightsRequest2):
+    """
+    Generate comprehensive security insights with metrics, detailed insights, and trends.
+    Returns a simplified and more focused security analysis.
+    """
+    if not request.messages:
+        # Return empty response if no messages provided
+        return SecurityInsightsResponse2(
+            metrics=SecurityMetrics2(
+                overallScore=100,
+                totalRisks=0,
+                riskLevel="low",
+                highRiskCount=0,
+                mediumRiskCount=0,
+                lowRiskCount=0,
+                sensitiveDataByType={}
+            ),
+            insights=[],
+            trends=[]
+        )
+    
+    # Create a parser from the provided messages
+    parser = create_parser_from_messages(request.messages)
+    
+    # Get all sensitive data
+    all_sensitive_data = {}
+    sensitive_data_counts = {}
+    
+    for msg in request.messages:
+        if msg.message_type == "text":
+            sensitive_data = detector.detect_sensitive_data(msg.content)
+            for data_type, values in sensitive_data.items():
+                if data_type not in all_sensitive_data:
+                    all_sensitive_data[data_type] = []
+                    sensitive_data_counts[data_type] = 0
+                all_sensitive_data[data_type].extend(values)
+                sensitive_data_counts[data_type] += len(values)
+    
+    # Remove duplicates while preserving order
+    for data_type in all_sensitive_data:
+        all_sensitive_data[data_type] = list(dict.fromkeys(all_sensitive_data[data_type]))
+    
+    # Generate insights based on findings
+    insights = []
+    
+    # Email insight
+    if "email" in all_sensitive_data and len(all_sensitive_data["email"]) > 0:
+        insights.append(SecurityInsight2(
+            title="Email Address Exposure",
+            description=f"Found {sensitive_data_counts['email']} email addresses in the conversation that could be used for phishing attacks or identity theft.",
+            severity="high",
+            recommendations=[
+                "Remove email addresses when sharing conversations",
+                "Use secure channels for sharing email addresses",
+                "Consider using masked or temporary email addresses"
+            ]
+        ))
+    
+    # Phone number insight
+    if "phone" in all_sensitive_data and len(all_sensitive_data["phone"]) > 0:
+        insights.append(SecurityInsight2(
+            title="Phone Number Exposure",
+            description=f"Found {sensitive_data_counts['phone']} phone numbers that could be used for unwanted calls or SMS phishing.",
+            severity="high",
+            recommendations=[
+                "Remove phone numbers when sharing conversations",
+                "Use messaging apps that don't require phone number sharing",
+                "Consider using temporary phone numbers for sensitive communications"
+            ]
+        ))
+    
+    # Credit card insight
+    if "credit_card" in all_sensitive_data and len(all_sensitive_data["credit_card"]) > 0:
+        insights.append(SecurityInsight2(
+            title="Credit Card Information Exposure",
+            description=f"Found {sensitive_data_counts['credit_card']} credit card numbers that pose a serious financial security risk.",
+            severity="high",
+            recommendations=[
+                "Immediately remove all credit card numbers from the conversation",
+                "Never share credit card details through chat",
+                "Use secure payment methods instead of sharing card details"
+            ]
+        ))
+    
+    # Location insight
+    if ("location" in all_sensitive_data or "address" in all_sensitive_data):
+        location_count = sensitive_data_counts.get("location", 0) + sensitive_data_counts.get("address", 0)
+        insights.append(SecurityInsight2(
+            title="Location Information Exposure",
+            description=f"Found {location_count} location references that could compromise physical security and privacy.",
+            severity="medium",
+            recommendations=[
+                "Avoid sharing precise location information in chats",
+                "Use general area names instead of specific addresses",
+                "Be cautious about sharing meeting locations publicly"
+            ]
+        ))
+    
+    # URL insight
+    if "url" in all_sensitive_data and len(all_sensitive_data["url"]) > 0:
+        insights.append(SecurityInsight2(
+            title="URL Sharing",
+            description=f"Found {sensitive_data_counts['url']} URLs that could potentially lead to phishing or malware sites.",
+            severity="low",
+            recommendations=[
+                "Verify all URLs before clicking",
+                "Use URL preview features to check destinations",
+                "Be cautious with shortened URLs"
+            ]
+        ))
+    
+    # Date insight
+    if "date" in all_sensitive_data and len(all_sensitive_data["date"]) > 0:
+        insights.append(SecurityInsight2(
+            title="Date Information Sharing",
+            description=f"Found {sensitive_data_counts['date']} dates that could reveal patterns or schedules.",
+            severity="low",
+            recommendations=[
+                "Be cautious about sharing specific dates for future events",
+                "Consider the context when sharing date information",
+                "Avoid sharing recurring schedule information"
+            ]
+        ))
+    
+    # Calculate risk counts
+    high_risk_count = sum(1 for insight in insights if insight.severity == "high")
+    medium_risk_count = sum(1 for insight in insights if insight.severity == "medium")
+    low_risk_count = sum(1 for insight in insights if insight.severity == "low")
+    total_risks = high_risk_count + medium_risk_count + low_risk_count
+    
+    # Determine overall risk level
+    risk_level = "low"
+    if high_risk_count > 0:
+        risk_level = "high"
+    elif medium_risk_count > 0:
+        risk_level = "medium"
+    
+    # Calculate overall score
+    # Base score of 100, deduct points based on findings
+    overall_score = 100
+    if high_risk_count > 0:
+        overall_score -= 25 * min(high_risk_count, 3)  # Max deduction of 75 for high
+    if medium_risk_count > 0:
+        overall_score -= 10 * min(medium_risk_count, 3)  # Max deduction of 30 for medium
+    if low_risk_count > 0:
+        overall_score -= 5 * min(low_risk_count, 3)  # Max deduction of 15 for low
+    
+    # Ensure score is between 0-100
+    overall_score = max(0, min(100, overall_score))
+    
+    # Generate trends
+    trends = []
+    
+    # Only generate trends if compare_with_previous is True
+    if request.compare_with_previous:
+        # In a real implementation, we would compare with previous data
+        # For now, we'll generate some sample trends
+        
+        # Overall security trend
+        direction = random.choice(["increasing", "decreasing", "stable"])
+        change_percentage = random.uniform(5, 15) if direction != "stable" else 0
+        
+        trends.append(SecurityTrend2(
+            type="Overall Security",
+            direction=direction,
+            changePercentage=round(change_percentage, 1),
+            period="last 7 days",
+            description=f"Overall security has been {direction} by {round(change_percentage, 1)}% over the last week."
+        ))
+        
+        # Sensitive data trend
+        if total_risks > 0:
+            direction = random.choice(["increasing", "decreasing"])
+            change_percentage = random.uniform(10, 30)
+            
+            trends.append(SecurityTrend2(
+                type="Sensitive Data Exposure",
+                direction=direction,
+                changePercentage=round(change_percentage, 1),
+                period="last 30 days",
+                description=f"Sensitive data exposure has been {direction} by {round(change_percentage, 1)}% over the last month."
+            ))
+        
+        # Risk-specific trend
+        if high_risk_count > 0:
+            direction = "increasing" if random.random() > 0.7 else "decreasing"
+            change_percentage = random.uniform(5, 25)
+            
+            trends.append(SecurityTrend2(
+                type="High Risk Issues",
+                direction=direction,
+                changePercentage=round(change_percentage, 1),
+                period="last 14 days",
+                description=f"High risk security issues have been {direction} by {round(change_percentage, 1)}% over the last two weeks."
+            ))
+    else:
+        # Add a baseline trend when no comparison is requested
+        trends.append(SecurityTrend2(
+            type="Security Baseline",
+            direction="stable",
+            changePercentage=0,
+            period="current",
+            description="This is your security baseline. Future analyses will show trends compared to this baseline."
+        ))
+    
+    return SecurityInsightsResponse2(
+        metrics=SecurityMetrics2(
+            overallScore=round(overall_score, 1),
+            totalRisks=total_risks,
+            riskLevel=risk_level,
+            highRiskCount=high_risk_count,
+            mediumRiskCount=medium_risk_count,
+            lowRiskCount=low_risk_count,
+            sensitiveDataByType=sensitive_data_counts
+        ),
+        insights=insights,
+        trends=trends
     ) 

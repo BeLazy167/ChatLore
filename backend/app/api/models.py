@@ -174,4 +174,36 @@ class SecurityInsightsResponse(BaseModel):
     recommendations: List[SecurityRecommendationDetail]
 
 class SecurityInsightsRequest(BaseModel):
-    messages: List[MessageBase] 
+    messages: List[MessageBase]
+
+# New SecurityInsights2 models
+class SecurityMetrics2(BaseModel):
+    overallScore: float
+    totalRisks: int
+    riskLevel: str
+    highRiskCount: int
+    mediumRiskCount: int
+    lowRiskCount: int
+    sensitiveDataByType: Dict[str, int]
+
+class SecurityInsight2(BaseModel):
+    title: str
+    description: str
+    severity: str
+    recommendations: List[str]
+
+class SecurityTrend2(BaseModel):
+    type: str
+    direction: str
+    changePercentage: float
+    period: str
+    description: str
+
+class SecurityInsightsResponse2(BaseModel):
+    metrics: SecurityMetrics2
+    insights: List[SecurityInsight2]
+    trends: List[SecurityTrend2]
+
+class SecurityInsightsRequest2(BaseModel):
+    messages: List[MessageBase]
+    compare_with_previous: bool = False 
