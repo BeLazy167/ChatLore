@@ -1,6 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { useUploadChat } from "../lib/queries";
-import { useChatContext } from "../lib/ChatContext";
 import { Button } from "./ui/button";
 import {
     Card,
@@ -18,6 +17,24 @@ interface ChatUploaderProps {
     initialChatName?: string;
 }
 
+// Define the response type based on the API response structure
+interface ChatUploadResponse {
+    message: string;
+    total_messages: number;
+    statistics: Record<string, unknown>;
+    messages: Array<{
+        timestamp: string;
+        sender: string;
+        content: string;
+        message_type: string;
+        duration: string;
+        url: string;
+        language: string;
+        is_system_message: boolean;
+    }>;
+    id?: string; // Add this field to match what's being used in the code
+}
+
 export function ChatUploader({
     selectedChatId,
     onChatUploaded,
@@ -26,24 +43,16 @@ export function ChatUploader({
     const [fileName, setFileName] = useState<string>("");
     const [chatName, setChatName] = useState<string>(initialChatName);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const { uploadChat, chats } = useChatContext();
 
     // Use the TanStack Query mutation
     const uploadChatMutation = useUploadChat();
 
-    // Update chat name when selectedChatId or initialChatName changes
-    useEffect(() => {
-        if (selectedChatId) {
-            const selectedChat = chats.find(
-                (chat) => chat.id === selectedChatId
-            );
-            if (selectedChat) {
-                setChatName(selectedChat.name);
-            }
-        } else if (initialChatName) {
+    // Update chat name when initialChatName changes
+    React.useEffect(() => {
+        if (initialChatName) {
             setChatName(initialChatName);
         }
-    }, [selectedChatId, chats, initialChatName]);
+    }, [initialChatName]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
@@ -68,24 +77,23 @@ export function ChatUploader({
             const file = fileInputRef.current.files[0];
 
             try {
-                // Use TanStack Query mutation to upload the file
-                await uploadChatMutation.mutateAsync(file);
-
                 // Read the file content
                 const reader = new FileReader();
                 reader.onload = async (event) => {
                     if (event.target?.result) {
                         const chatText = event.target.result as string;
 
-                        // Save to local database using ChatContext
-                        const newChatId = await uploadChat(
-                            chatName || "Unnamed Chat",
+                        // Use TanStack Query mutation to upload the file
+                        const response = await uploadChatMutation.mutateAsync(
                             chatText
                         );
 
                         // Notify parent component about the new chat
-                        if (onChatUploaded) {
-                            onChatUploaded(newChatId);
+                        if (onChatUploaded && response) {
+                            // Handle the case where id might not exist directly
+                            const chatId =
+                                (response as ChatUploadResponse).id || "";
+                            onChatUploaded(chatId);
                         }
 
                         // Reset form
@@ -206,7 +214,8 @@ export function ChatUploader({
                 <Button
                     onClick={handleSubmit}
                     disabled={
-                        !fileInputRef.current || uploadChatMutation.isPending
+                        !fileInputRef.current?.files?.length ||
+                        uploadChatMutation.isPending
                     }
                     className="w-full"
                 >

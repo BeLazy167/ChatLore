@@ -23,9 +23,7 @@ import {
     CollapsibleTrigger,
 } from "./ui/collapsible";
 import { ScrollArea } from "./ui/scroll-area";
-import { useConversationThreads } from "@/lib/queries";
 import { useState } from "react";
-import { useChatContext } from "@/lib/ChatContext";
 
 interface ConversationThread {
     id: string;
@@ -39,19 +37,40 @@ interface ConversationThread {
 }
 
 const ConversationThreads = () => {
-    const { messages: contextMessages } = useChatContext();
+    // Dummy data for development
+    const dummyThreads: ConversationThread[] = [
+        {
+            id: "1",
+            title: "Planning the weekend trip",
+            messageIds: ["msg1", "msg2", "msg3", "msg4", "msg5"],
+            startTime: "2023-05-10T10:00:00Z",
+            endTime: "2023-05-10T11:30:00Z",
+            participants: ["John Doe", "Jane Smith"],
+            topics: ["Travel", "Planning", "Budget"],
+            sentiment: "positive"
+        },
+        {
+            id: "2",
+            title: "Project deadline discussion",
+            messageIds: ["msg6", "msg7", "msg8", "msg9"],
+            startTime: "2023-05-11T14:00:00Z",
+            endTime: "2023-05-11T15:45:00Z",
+            participants: ["Jane Smith", "Bob Johnson", "Alice Williams"],
+            topics: ["Work", "Deadline", "Project"],
+            sentiment: "negative"
+        },
+        {
+            id: "3",
+            title: "Birthday party organization",
+            messageIds: ["msg10", "msg11", "msg12"],
+            startTime: "2023-05-12T09:15:00Z",
+            endTime: "2023-05-12T10:30:00Z",
+            participants: ["John Doe", "Alice Williams", "Charlie Brown"],
+            topics: ["Birthday", "Party", "Gifts"],
+            sentiment: "positive"
+        }
+    ];
 
-    // Convert ChatContext Message type to API Message type
-    const messages = contextMessages.map((msg) => ({
-        id: msg.id,
-        timestamp: msg.timestamp.toISOString(),
-        sender: msg.sender,
-        content: msg.content,
-        message_type: msg.messageType || "text",
-        is_system_message: msg.isSystemMessage || false,
-    }));
-
-    const { data, isPending, error } = useConversationThreads(messages);
     const [expandedThreads, setExpandedThreads] = useState<
         Record<string, boolean>
     >({});
@@ -100,50 +119,6 @@ const ConversationThreads = () => {
             .toUpperCase();
     };
 
-    if (isPending) {
-        return (
-            <Card>
-                <CardHeader>
-                    <CardTitle>Conversation Threads</CardTitle>
-                    <CardDescription>
-                        Loading conversation threads...
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex justify-center items-center h-40">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                    </div>
-                </CardContent>
-            </Card>
-        );
-    }
-
-    if (error) {
-        return (
-            <Card>
-                <CardHeader>
-                    <CardTitle>Conversation Threads</CardTitle>
-                    <CardDescription>
-                        There was a problem loading conversation threads
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Alert variant="destructive">
-                        <AlertTriangle className="h-4 w-4" />
-                        <AlertTitle>Error</AlertTitle>
-                        <AlertDescription>
-                            {error instanceof Error
-                                ? error.message
-                                : "Failed to load conversation threads"}
-                        </AlertDescription>
-                    </Alert>
-                </CardContent>
-            </Card>
-        );
-    }
-
-    const { threads = [] } = data || {};
-
     return (
         <Card>
             <CardHeader>
@@ -152,7 +127,7 @@ const ConversationThreads = () => {
                     <CardTitle>Conversation Threads</CardTitle>
                 </div>
                 <CardDescription>
-                    AI-identified conversation threads from your chat
+                    AI-identified conversation threads from your chat (dummy data)
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -165,7 +140,7 @@ const ConversationThreads = () => {
 
                     <TabsContent value="all" className="pt-4">
                         <ThreadList
-                            threads={threads}
+                            threads={dummyThreads}
                             expandedThreads={expandedThreads}
                             toggleThread={toggleThread}
                             getSentimentColor={getSentimentColor}
@@ -177,7 +152,7 @@ const ConversationThreads = () => {
 
                     <TabsContent value="positive" className="pt-4">
                         <ThreadList
-                            threads={threads.filter(
+                            threads={dummyThreads.filter(
                                 (t) => t.sentiment === "positive"
                             )}
                             expandedThreads={expandedThreads}
@@ -191,7 +166,7 @@ const ConversationThreads = () => {
 
                     <TabsContent value="negative" className="pt-4">
                         <ThreadList
-                            threads={threads.filter(
+                            threads={dummyThreads.filter(
                                 (t) => t.sentiment === "negative"
                             )}
                             expandedThreads={expandedThreads}
@@ -204,7 +179,7 @@ const ConversationThreads = () => {
                     </TabsContent>
 
                     <TabsContent value="topics" className="space-y-4">
-                        {data?.threads
+                        {dummyThreads
                             .sort((a, b) => b.topics.length - a.topics.length)
                             .map((thread) => (
                                 <Collapsible

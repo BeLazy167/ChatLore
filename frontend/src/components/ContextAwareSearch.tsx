@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import {
     Card,
     CardContent,
@@ -26,58 +25,81 @@ import {
     ChevronUp,
     Loader2,
 } from "lucide-react";
-import { useAISearch } from "@/hooks/useAI";
-import { Message } from "@/lib/api";
 import {
     Collapsible,
     CollapsibleContent,
     CollapsibleTrigger,
 } from "./ui/collapsible";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
-import { useChatContext } from "@/lib/ChatContext";
+import { useSearchSemanticStateless } from "@/lib/queries";
+import { useState } from "react";
+
+// API Input format:
+// {
+//     "query": "string",
+//     "min_similarity": 0.3,
+//     "limit": 10,
+//     "with_explanation": false
+// }
+
+// API Output format:
+// [
+//     {
+//       "message": {},
+//       "similarity": 0,
+//       "context": {
+//         "before": [
+//           "string"
+//         ],
+//         "after": [
+//           "string"
+//         ]
+//       },
+//       "explanation": "string"
+//     }
+// ]
+
+interface SearchResult {
+    message: {
+        id?: string;
+        sender: string;
+        content: string;
+        timestamp: string;
+    };
+    similarity: number;
+    context: {
+        before: string[];
+        after: string[];
+    };
+    explanation?: string;
+}
 
 export const ContextAwareSearch = () => {
     const [query, setQuery] = useState("");
-    const [selectedFilter, setSelectedFilter] = useState<string>("all");
+    const [minSimilarity, setMinSimilarity] = useState(0.3);
+    const [resultLimit, setResultLimit] = useState(10);
+    const [withExplanation, setWithExplanation] = useState(false);
+    const [selectedFilter, setSelectedFilter] = useState("all");
     const [expandedResults, setExpandedResults] = useState<
         Record<string, boolean>
     >({});
-    const [minSimilarity, setMinSimilarity] = useState<number>(0.3);
-    const [resultLimit, setResultLimit] = useState<number>(10);
-    const [withExplanation, setWithExplanation] = useState<boolean>(false);
-    const [messages, setMessages] = useState<Message[]>([]);
 
-    const { messages: contextMessages } = useChatContext();
-
-    // Load messages when selected chat changes
-    useEffect(() => {
-        setMessages(
-            contextMessages.map((msg) => ({
-                ...msg,
-                message_type: msg.messageType,
-                is_system_message: msg.isSystemMessage,
-                timestamp: msg.timestamp.toISOString(),
-                duration: msg.duration?.toString(),
-                url: msg.url,
-                language: msg.language,
-            }))
-        );
-    }, [contextMessages]);
-
-    const { mutate: search, data, isPending, isError, error } = useAISearch();
+    const {
+        mutate: search,
+        data,
+        isPending,
+        isError,
+        error,
+    } = useSearchSemanticStateless(
+        query,
+        minSimilarity,
+        resultLimit,
+        withExplanation
+    );
 
     const handleSearch = () => {
         if (!query.trim()) return;
-        const filters =
-            selectedFilter !== "all" ? { type: selectedFilter } : {};
-        search({
-            query: query.trim(),
-            filters,
-            messages,
-            min_similarity: minSimilarity,
-            limit: resultLimit,
-            with_explanation: withExplanation,
-        });
+        search();
     };
 
     const toggleResultExpansion = (resultId: string) => {
@@ -209,30 +231,26 @@ export const ContextAwareSearch = () => {
                     <div className="space-y-4">
                         <div className="flex justify-between items-center">
                             <div className="text-sm text-muted-foreground">
-                                {data.totalResults} results found
-                            </div>
-                            <div className="flex gap-1">
-                                {data.searchContext.aiEnhancements.map(
-                                    (enhancement) => (
-                                        <Badge
-                                            key={enhancement}
-                                            variant="outline"
-                                            className="bg-primary/10"
-                                        >
-                                            {enhancement}
-                                        </Badge>
-                                    )
-                                )}
+                                {data.length} results found
                             </div>
                         </div>
 
                         <ScrollArea className="h-[400px] rounded-md border p-4">
-                            {data.results.length > 0 ? (
+                            {data && data.length > 0 ? (
                                 <div className="space-y-4">
-                                    {data.results.map((result) => (
+                                    {data.map((result: SearchResult, index) => (
                                         <Collapsible
-                                            key={result.id}
-                                            open={expandedResults[result.id]}
+                                            key={
+                                                result.message.id ||
+                                                `result-${index}`
+                                            }
+                                            open={
+                                                result.message.id
+                                                    ? expandedResults[
+                                                          result.message.id
+                                                      ]
+                                                    : false
+                                            }
                                             className="border rounded-lg overflow-hidden"
                                         >
                                             <div className="bg-muted p-3">
@@ -241,14 +259,20 @@ export const ContextAwareSearch = () => {
                                                         <div className="flex items-center gap-2">
                                                             <User className="h-4 w-4 text-muted-foreground" />
                                                             <span className="font-medium">
-                                                                {result.sender}
+                                                                {
+                                                                    result
+                                                                        .message
+                                                                        .sender
+                                                                }
                                                             </span>
                                                         </div>
                                                         <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                                                             <Calendar className="h-3 w-3" />
                                                             <span>
                                                                 {formatDate(
-                                                                    result.timestamp
+                                                                    result
+                                                                        .message
+                                                                        .timestamp
                                                                 )}
                                                             </span>
                                                             <Badge
@@ -256,7 +280,7 @@ export const ContextAwareSearch = () => {
                                                                 className="ml-2"
                                                             >
                                                                 {Math.round(
-                                                                    result.relevanceScore *
+                                                                    result.similarity *
                                                                         100
                                                                 )}
                                                                 % match
@@ -270,12 +294,18 @@ export const ContextAwareSearch = () => {
                                                             className="h-8 w-8 p-0"
                                                             onClick={() =>
                                                                 toggleResultExpansion(
-                                                                    result.id
+                                                                    result
+                                                                        .message
+                                                                        .id ||
+                                                                        `result-${index}`
                                                                 )
                                                             }
                                                         >
-                                                            {expandedResults[
-                                                                result.id
+                                                            {result.message
+                                                                .id &&
+                                                            expandedResults[
+                                                                result.message
+                                                                    .id
                                                             ] ? (
                                                                 <ChevronUp className="h-4 w-4" />
                                                             ) : (
@@ -285,24 +315,27 @@ export const ContextAwareSearch = () => {
                                                     </CollapsibleTrigger>
                                                 </div>
                                                 <p className="mt-2 text-sm">
-                                                    {result.content}
+                                                    {result.message.content}
                                                 </p>
                                             </div>
                                             <CollapsibleContent>
                                                 <div className="p-3 bg-background border-t">
-                                                    <div className="flex items-start gap-2 mb-2">
-                                                        <Info className="h-4 w-4 text-primary mt-0.5" />
-                                                        <div>
-                                                            <p className="text-sm font-medium">
-                                                                AI Explanation
-                                                            </p>
-                                                            <p className="text-sm text-muted-foreground">
-                                                                {
-                                                                    result.aiExplanation
-                                                                }
-                                                            </p>
+                                                    {result.explanation && (
+                                                        <div className="flex items-start gap-2 mb-2">
+                                                            <Info className="h-4 w-4 text-primary mt-0.5" />
+                                                            <div>
+                                                                <p className="text-sm font-medium">
+                                                                    AI
+                                                                    Explanation
+                                                                </p>
+                                                                <p className="text-sm text-muted-foreground">
+                                                                    {
+                                                                        result.explanation
+                                                                    }
+                                                                </p>
+                                                            </div>
                                                         </div>
-                                                    </div>
+                                                    )}
 
                                                     {(result.context.before
                                                         .length > 0 ||
@@ -327,7 +360,11 @@ export const ContextAwareSearch = () => {
                                                                 )
                                                             )}
                                                             <div className="text-xs bg-primary/10 p-1 rounded my-1">
-                                                                {result.content}
+                                                                {
+                                                                    result
+                                                                        .message
+                                                                        .content
+                                                                }
                                                             </div>
                                                             {result.context.after.map(
                                                                 (

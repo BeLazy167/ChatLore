@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useChatContext } from "../lib/ChatContext";
 import {
     Card,
     CardContent,
@@ -7,7 +6,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import { Button } from "./ui/button";   
+import { Button } from "./ui/button";
 import {
     Dialog,
     DialogContent,
@@ -36,23 +35,61 @@ interface ChatSelectorProps {
     onCreateNewChat?: (chatName: string) => void;
 }
 
+interface Chat {
+    id: string;
+    name: string;
+    uploadDate: string;
+    messageCount: number;
+}
+
 export function ChatSelector({
     selectedChatId,
     onChatSelected,
     onCreateNewChat,
 }: ChatSelectorProps) {
-    const { chats, deleteChat, isLoading } = useChatContext();
     const [newChatName, setNewChatName] = useState("");
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [chatToDelete, setChatToDelete] = useState<string | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [chats, setChats] = useState<Chat[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
 
-    // Set the selected chat when component mounts or when chats change
+    // Fetch chats when component mounts
     useEffect(() => {
-        if (chats.length > 0 && !selectedChatId) {
-            onChatSelected(chats[0].id);
+        fetchChats();
+    }, []);
+
+    const fetchChats = async () => {
+        setIsLoading(true);
+        try {
+            // Replace with actual API call
+            const response = await fetch("/api/chats");
+            const data = await response.json();
+            setChats(data);
+        } catch (error) {
+            console.error("Error fetching chats:", error);
+            setChats([]);
+        } finally {
+            setIsLoading(false);
         }
-    }, [chats, selectedChatId, onChatSelected]);
+    };
+
+    const deleteChat = async (chatId: string) => {
+        try {
+            // Replace with actual API call
+            await fetch(`/api/chats/${chatId}`, {
+                method: "DELETE",
+            });
+            // Update local state after successful deletion
+            setChats(chats.filter((chat) => chat.id !== chatId));
+            // If the deleted chat was selected, deselect it
+            if (selectedChatId === chatId) {
+                onChatSelected("");
+            }
+        } catch (error) {
+            console.error("Error deleting chat:", error);
+        }
+    };
 
     const handleChatSelect = (chatId: string) => {
         onChatSelected(chatId);
@@ -70,21 +107,6 @@ export function ChatSelector({
             setChatToDelete(null);
         }
     };
-
-    if (isLoading) {
-        return (
-            <Card className="h-full flex items-center justify-center">
-                <CardContent className="pt-6">
-                    <div className="flex flex-col items-center justify-center space-y-2">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        <p className="text-sm text-muted-foreground">
-                            Loading chats...
-                        </p>
-                    </div>
-                </CardContent>
-            </Card>
-        );
-    }
 
     return (
         <Card className="h-full">
@@ -146,7 +168,11 @@ export function ChatSelector({
                 </Dialog>
             </CardHeader>
             <CardContent>
-                {chats.length === 0 ? (
+                {isLoading ? (
+                    <div className="flex justify-center py-8">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                ) : chats.length === 0 ? (
                     <Alert>
                         <AlertTitle>No chats found</AlertTitle>
                         <AlertDescription>

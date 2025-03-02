@@ -22,7 +22,6 @@ import {
     CreditCard,
 } from "lucide-react";
 import { Progress } from "./ui/progress";
-import { useSecurityInsights } from "@/hooks/useAI";
 import {
     BarChart,
     Bar,
@@ -35,71 +34,10 @@ import {
 import { ScrollArea } from "./ui/scroll-area";
 import { Button } from "./ui/button";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "./ui/hover-card";
-import { useChatContext } from "@/lib/ChatContext";
-
-interface SecurityMetrics {
-    securityScore: number;
-    totalFindings: number;
-    criticalCount: number;
-    highCount: number;
-    sensitiveDataCount: number;
-}
-
-interface SecurityFinding {
-    title: string;
-    description: string;
-    severity: string;
-    impact: string;
-    recommendations: string[];
-    examples?: string[];
-}
-
-interface SensitiveDataInfo {
-    count: number;
-    examples: string[];
-}
-
-interface SecurityTrend {
-    category: string;
-    count: number;
-}
-
-interface SecurityRecommendation {
-    title: string;
-    description: string;
-    impact: string;
-    priority: string;
-    steps: string[];
-}
-
-interface SecurityInsightsResponse {
-    insights: SecurityFinding[];
-    metrics: SecurityMetrics;
-    sensitiveData: Record<string, SensitiveDataInfo>;
-    trends: SecurityTrend[];
-    recommendations: SecurityRecommendation[];
-}
+import { useSecurityInsightsV2Stateless } from "@/lib/queries";
 
 const SecurityDashboard = () => {
-    const { messages: contextMessages } = useChatContext();
-    const { data, isPending, error } = useSecurityInsights(
-        contextMessages.map((msg) => ({
-            id: msg.id,
-            timestamp: msg.timestamp.toISOString(),
-            sender: msg.sender,
-            content: msg.content,
-            message_type: msg.messageType || "text",
-            is_system_message: msg.isSystemMessage || false,
-        }))
-    );
-    const securityData = (data || {}) as SecurityInsightsResponse;
-    const {
-        insights = [],
-        metrics = {} as SecurityMetrics,
-        sensitiveData = {} as Record<string, SensitiveDataInfo>,
-        trends = [],
-        recommendations = [],
-    } = securityData;
+    const { data, isPending, error } = useSecurityInsightsV2Stateless();
     const [selectedCategory, setSelectedCategory] = useState<string | null>(
         null
     );
@@ -149,6 +87,28 @@ const SecurityDashboard = () => {
         );
     }
 
+    if (!data) {
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Security Analysis</CardTitle>
+                    <CardDescription>No data available</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Alert>
+                        <Info className="h-4 w-4" />
+                        <AlertTitle>No Data</AlertTitle>
+                        <AlertDescription>
+                            Please upload a chat to analyze security risks.
+                        </AlertDescription>
+                    </Alert>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    const { insights, metrics, trends } = data;
+
     const getSeverityBadge = (severity: string) => {
         switch (severity.toLowerCase()) {
             case "critical":
@@ -183,6 +143,14 @@ const SecurityDashboard = () => {
         }
     };
 
+    // Prepare trend data for chart
+    const trendData =
+        trends?.map((trend) => ({
+            category: trend.type,
+            count: trend.changePercentage,
+            direction: trend.direction,
+        })) || [];
+
     return (
         <Card className="w-full">
             <CardHeader>
@@ -216,13 +184,13 @@ const SecurityDashboard = () => {
                                 <Card>
                                     <CardContent className="pt-6">
                                         <div className="text-2xl font-bold">
-                                            {metrics?.securityScore}%
+                                            {metrics?.overallScore}%
                                         </div>
                                         <p className="text-sm text-muted-foreground">
                                             Security Score
                                         </p>
                                         <Progress
-                                            value={metrics?.securityScore}
+                                            value={metrics?.overallScore}
                                             className="mt-2"
                                         />
                                     </CardContent>
@@ -230,18 +198,18 @@ const SecurityDashboard = () => {
                                 <Card>
                                     <CardContent className="pt-6">
                                         <div className="text-2xl font-bold">
-                                            {metrics?.totalFindings}
+                                            {metrics?.totalRisks}
                                         </div>
                                         <p className="text-sm text-muted-foreground">
                                             Security Findings
                                         </p>
                                         <div className="flex gap-2 mt-2">
                                             <Badge variant="destructive">
-                                                {metrics?.criticalCount}{" "}
-                                                Critical
+                                                {metrics?.highRiskCount} High
                                             </Badge>
                                             <Badge variant="secondary">
-                                                {metrics?.highCount} High
+                                                {metrics?.mediumRiskCount}{" "}
+                                                Medium
                                             </Badge>
                                         </div>
                                     </CardContent>
@@ -249,7 +217,14 @@ const SecurityDashboard = () => {
                                 <Card>
                                     <CardContent className="pt-6">
                                         <div className="text-2xl font-bold">
-                                            {metrics?.sensitiveDataCount}
+                                            {Object.values(
+                                                metrics?.sensitiveDataByType ||
+                                                    {}
+                                            ).reduce(
+                                                (sum, count) =>
+                                                    sum + (count as number),
+                                                0
+                                            )}
                                         </div>
                                         <p className="text-sm text-muted-foreground">
                                             Sensitive Data Points
@@ -258,7 +233,8 @@ const SecurityDashboard = () => {
                                             <Badge>
                                                 {
                                                     Object.keys(
-                                                        sensitiveData || {}
+                                                        metrics?.sensitiveDataByType ||
+                                                            {}
                                                     ).length
                                                 }{" "}
                                                 Categories
@@ -279,7 +255,7 @@ const SecurityDashboard = () => {
                                             width="100%"
                                             height="100%"
                                         >
-                                            <BarChart data={trends}>
+                                            <BarChart data={trendData}>
                                                 <CartesianGrid strokeDasharray="3 3" />
                                                 <XAxis dataKey="category" />
                                                 <YAxis />
@@ -324,14 +300,6 @@ const SecurityDashboard = () => {
                                             <div className="space-y-4">
                                                 <div>
                                                     <h4 className="font-medium mb-2">
-                                                        Impact
-                                                    </h4>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {finding.impact}
-                                                    </p>
-                                                </div>
-                                                <div>
-                                                    <h4 className="font-medium mb-2">
                                                         Recommendations
                                                     </h4>
                                                     <ul className="list-disc pl-4 space-y-2">
@@ -347,33 +315,6 @@ const SecurityDashboard = () => {
                                                         )}
                                                     </ul>
                                                 </div>
-                                                {finding.examples && (
-                                                    <div>
-                                                        <h4 className="font-medium mb-2">
-                                                            Examples
-                                                        </h4>
-                                                        <div className="space-y-2">
-                                                            {finding.examples.map(
-                                                                (
-                                                                    example,
-                                                                    idx
-                                                                ) => (
-                                                                    <Alert
-                                                                        key={
-                                                                            idx
-                                                                        }
-                                                                    >
-                                                                        <AlertDescription>
-                                                                            {
-                                                                                example
-                                                                            }
-                                                                        </AlertDescription>
-                                                                    </Alert>
-                                                                )
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                )}
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -385,73 +326,72 @@ const SecurityDashboard = () => {
                     <TabsContent value="sensitive">
                         <div className="grid gap-4">
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                {Object.entries(sensitiveData || {}).map(
-                                    ([type, data]) => (
-                                        <Card
-                                            key={type}
-                                            className={`cursor-pointer ${
+                                {Object.entries(
+                                    metrics?.sensitiveDataByType || {}
+                                ).map(([type, count]) => (
+                                    <Card
+                                        key={type}
+                                        className={`cursor-pointer ${
+                                            selectedCategory === type
+                                                ? "ring-2 ring-primary"
+                                                : ""
+                                        }`}
+                                        onClick={() =>
+                                            setSelectedCategory(
                                                 selectedCategory === type
-                                                    ? "ring-2 ring-primary"
-                                                    : ""
-                                            }`}
-                                            onClick={() =>
-                                                setSelectedCategory(
-                                                    selectedCategory === type
-                                                        ? null
-                                                        : type
-                                                )
-                                            }
-                                        >
-                                            <CardContent className="pt-6">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2">
-                                                        {getDataTypeIcon(type)}
-                                                        <span className="font-medium">
-                                                            {type}
-                                                        </span>
-                                                    </div>
-                                                    <Badge>{data.count}</Badge>
+                                                    ? null
+                                                    : type
+                                            )
+                                        }
+                                    >
+                                        <CardContent className="pt-6">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    {getDataTypeIcon(type)}
+                                                    <span className="font-medium">
+                                                        {type}
+                                                    </span>
                                                 </div>
-                                            </CardContent>
-                                        </Card>
-                                    )
-                                )}
-                            </div>
-
-                            {selectedCategory &&
-                                sensitiveData?.[selectedCategory] && (
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle>
-                                                {selectedCategory} Details
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <ScrollArea className="h-[300px]">
-                                                <div className="space-y-2">
-                                                    {sensitiveData[
-                                                        selectedCategory
-                                                    ].examples.map(
-                                                        (example, index) => (
-                                                            <Alert key={index}>
-                                                                <AlertDescription>
-                                                                    {example}
-                                                                </AlertDescription>
-                                                            </Alert>
-                                                        )
-                                                    )}
-                                                </div>
-                                            </ScrollArea>
+                                                <Badge>{count as number}</Badge>
+                                            </div>
                                         </CardContent>
                                     </Card>
-                                )}
+                                ))}
+                            </div>
+
+                            {selectedCategory && (
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>
+                                            {selectedCategory} Details
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <Alert>
+                                            <Info className="h-4 w-4" />
+                                            <AlertTitle>Information</AlertTitle>
+                                            <AlertDescription>
+                                                {
+                                                    metrics
+                                                        ?.sensitiveDataByType?.[
+                                                        selectedCategory
+                                                    ]
+                                                }{" "}
+                                                instances of {selectedCategory}{" "}
+                                                data were detected in the
+                                                conversation.
+                                            </AlertDescription>
+                                        </Alert>
+                                    </CardContent>
+                                </Card>
+                            )}
                         </div>
                     </TabsContent>
 
                     <TabsContent value="recommendations">
                         <ScrollArea className="h-[600px] pr-4">
                             <div className="space-y-4">
-                                {recommendations?.map((rec, index) => (
+                                {data.recommendations?.map((rec, index) => (
                                     <Card key={index}>
                                         <CardHeader>
                                             <div className="flex items-center justify-between">
@@ -470,16 +410,10 @@ const SecurityDashboard = () => {
                                                     <HoverCardContent>
                                                         <div className="space-y-2">
                                                             <p className="text-sm">
-                                                                {rec.impact}
+                                                                {
+                                                                    rec.description
+                                                                }
                                                             </p>
-                                                            <div className="pt-2">
-                                                                <Badge variant="secondary">
-                                                                    Priority:{" "}
-                                                                    {
-                                                                        rec.priority
-                                                                    }
-                                                                </Badge>
-                                                            </div>
                                                         </div>
                                                     </HoverCardContent>
                                                 </HoverCard>
@@ -490,23 +424,6 @@ const SecurityDashboard = () => {
                                                 <p className="text-sm text-muted-foreground">
                                                     {rec.description}
                                                 </p>
-                                                <div className="space-y-2">
-                                                    <h4 className="font-medium">
-                                                        Steps to Implement:
-                                                    </h4>
-                                                    <ul className="list-disc pl-4 space-y-2">
-                                                        {rec.steps.map(
-                                                            (step, idx) => (
-                                                                <li
-                                                                    key={idx}
-                                                                    className="text-sm text-muted-foreground"
-                                                                >
-                                                                    {step}
-                                                                </li>
-                                                            )
-                                                        )}
-                                                    </ul>
-                                                </div>
                                             </div>
                                         </CardContent>
                                     </Card>

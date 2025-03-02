@@ -8,12 +8,65 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Badge } from "./ui/badge";
-import { Shield, AlertTriangle, TrendingUp, Info } from "lucide-react";
+import {
+    Shield,
+    AlertTriangle,
+    TrendingUp,
+    Info,
+    Link,
+    MapPin,
+    Phone,
+    Mail,
+    Calendar,
+    CreditCard,
+    Eye,
+} from "lucide-react";
 import { Progress } from "./ui/progress";
-import { useSecurityInsights } from "@/hooks/useApi";
+import { useSecurityInsightsV2Stateless } from "@/lib/queries";
+import { ScrollArea } from "./ui/scroll-area";
+import { useState } from "react";
+
+// Data structure from API:
+// {
+//     "metrics": {
+//       "overallScore": 0,
+//       "totalRisks": 0,
+//       "riskLevel": "string",
+//       "highRiskCount": 0,
+//       "mediumRiskCount": 0,
+//       "lowRiskCount": 0,
+//       "sensitiveDataByType": {
+//         "additionalProp1": 0,
+//         "additionalProp2": 0,
+//         "additionalProp3": 0
+//       }
+//     },
+//     "insights": [
+//       {
+//         "title": "string",
+//         "description": "string",
+//         "severity": "string",
+//         "recommendations": [
+//           "string"
+//         ]
+//       }
+//     ],
+//     "trends": [
+//       {
+//         "type": "string",
+//         "direction": "string",
+//         "changePercentage": 0,
+//         "period": "string",
+//         "description": "string"
+//       }
+//     ]
+//   }
 
 const SecurityInsights = () => {
-    const { data, isPending, error } = useSecurityInsights();
+    const { data, isPending, error } = useSecurityInsightsV2Stateless();
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(
+        null
+    );
 
     if (isPending) {
         return (
@@ -72,16 +125,37 @@ const SecurityInsights = () => {
         }
     };
 
-    const getRiskLevelBadge = (level: string) => {
-        switch (level.toLowerCase()) {
+    const getSeverityBadge = (severity: string) => {
+        switch (severity.toLowerCase()) {
+            case "critical":
+                return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
             case "high":
-                return "destructive";
+                return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
             case "medium":
-                return "secondary";
+                return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
             case "low":
-                return "default";
+                return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
             default:
-                return "outline";
+                return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+        }
+    };
+
+    const getDataTypeIcon = (type: string) => {
+        switch (type.toLowerCase()) {
+            case "url":
+                return <Link className="h-4 w-4" />;
+            case "location":
+                return <MapPin className="h-4 w-4" />;
+            case "phone":
+                return <Phone className="h-4 w-4" />;
+            case "email":
+                return <Mail className="h-4 w-4" />;
+            case "date":
+                return <Calendar className="h-4 w-4" />;
+            case "payment":
+                return <CreditCard className="h-4 w-4" />;
+            default:
+                return <Eye className="h-4 w-4" />;
         }
     };
 
@@ -111,9 +185,12 @@ const SecurityInsights = () => {
             </CardHeader>
             <CardContent>
                 <Tabs defaultValue="overview">
-                    <TabsList className="grid w-full grid-cols-3">
+                    <TabsList className="grid w-full grid-cols-4">
                         <TabsTrigger value="overview">Overview</TabsTrigger>
-                        <TabsTrigger value="insights">Insights</TabsTrigger>
+                        <TabsTrigger value="findings">Findings</TabsTrigger>
+                        <TabsTrigger value="sensitive">
+                            Sensitive Data
+                        </TabsTrigger>
                         <TabsTrigger value="trends">Trends</TabsTrigger>
                     </TabsList>
 
@@ -172,9 +249,11 @@ const SecurityInsights = () => {
                                                 </div>
                                                 <Progress
                                                     value={
-                                                        (metrics.highRiskCount /
-                                                            metrics.totalRisks) *
-                                                        100
+                                                        metrics.totalRisks > 0
+                                                            ? (metrics.highRiskCount /
+                                                                  metrics.totalRisks) *
+                                                              100
+                                                            : 0
                                                     }
                                                     className="bg-destructive/20 h-2"
                                                     indicatorClassName="bg-destructive"
@@ -191,9 +270,11 @@ const SecurityInsights = () => {
                                                 </div>
                                                 <Progress
                                                     value={
-                                                        (metrics.mediumRiskCount /
-                                                            metrics.totalRisks) *
-                                                        100
+                                                        metrics.totalRisks > 0
+                                                            ? (metrics.mediumRiskCount /
+                                                                  metrics.totalRisks) *
+                                                              100
+                                                            : 0
                                                     }
                                                     className="bg-yellow-100 h-2"
                                                     indicatorClassName="bg-yellow-600"
@@ -208,9 +289,11 @@ const SecurityInsights = () => {
                                                 </div>
                                                 <Progress
                                                     value={
-                                                        (metrics.lowRiskCount /
-                                                            metrics.totalRisks) *
-                                                        100
+                                                        metrics.totalRisks > 0
+                                                            ? (metrics.lowRiskCount /
+                                                                  metrics.totalRisks) *
+                                                              100
+                                                            : 0
                                                     }
                                                     className="bg-green-100 h-2"
                                                     indicatorClassName="bg-green-600"
@@ -219,107 +302,170 @@ const SecurityInsights = () => {
                                         </div>
                                     </CardContent>
                                 </Card>
-
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>
-                                            Sensitive Data Types
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            {Object.entries(
-                                                metrics.sensitiveDataByType
-                                            ).map(([type, count]) => (
-                                                <div
-                                                    key={type}
-                                                    className="flex justify-between items-center"
-                                                >
-                                                    <span className="text-sm">
-                                                        {type}
-                                                    </span>
-                                                    <Badge variant="outline">
-                                                        {count}
-                                                    </Badge>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </CardContent>
-                                </Card>
                             </>
                         )}
                     </TabsContent>
 
-                    <TabsContent value="insights" className="space-y-4">
-                        {insights?.map((insight, index) => (
-                            <Alert key={index}>
-                                <div className="flex items-center gap-2">
-                                    <Badge
-                                        variant={getRiskLevelBadge(
-                                            insight.severity
-                                        )}
-                                    >
-                                        {insight.severity.toUpperCase()}
-                                    </Badge>
-                                </div>
-                                <AlertTitle className="mt-2">
-                                    {insight.title}
-                                </AlertTitle>
-                                <AlertDescription className="mt-2 space-y-2">
-                                    <p>{insight.description}</p>
-                                    <div className="space-y-1">
-                                        <p className="font-medium">
-                                            Recommendations:
-                                        </p>
-                                        <ul className="list-disc pl-4 space-y-1">
-                                            {insight.recommendations.map(
-                                                (rec, idx) => (
-                                                    <li
-                                                        key={idx}
-                                                        className="text-sm"
-                                                    >
-                                                        {rec}
-                                                    </li>
+                    <TabsContent value="findings">
+                        <ScrollArea className="h-[600px] pr-4">
+                            <div className="space-y-4">
+                                {insights?.map((finding, index) => (
+                                    <Card key={index}>
+                                        <CardHeader>
+                                            <div className="flex items-center justify-between">
+                                                <div className="space-y-1">
+                                                    <CardTitle>
+                                                        {finding.title}
+                                                    </CardTitle>
+                                                    <CardDescription>
+                                                        {finding.description}
+                                                    </CardDescription>
+                                                </div>
+                                                <Badge
+                                                    className={getSeverityBadge(
+                                                        finding.severity
+                                                    )}
+                                                >
+                                                    {finding.severity}
+                                                </Badge>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <h4 className="font-medium mb-2">
+                                                        Recommendations
+                                                    </h4>
+                                                    <ul className="list-disc pl-4 space-y-2">
+                                                        {finding.recommendations.map(
+                                                            (rec, idx) => (
+                                                                <li
+                                                                    key={idx}
+                                                                    className="text-sm text-muted-foreground"
+                                                                >
+                                                                    {rec}
+                                                                </li>
+                                                            )
+                                                        )}
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        </ScrollArea>
+                    </TabsContent>
+
+                    <TabsContent value="sensitive">
+                        <div className="grid gap-4">
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                {metrics?.sensitiveDataByType &&
+                                    Object.entries(
+                                        metrics.sensitiveDataByType
+                                    ).map(([type, count]) => (
+                                        <Card
+                                            key={type}
+                                            className={`cursor-pointer ${
+                                                selectedCategory === type
+                                                    ? "ring-2 ring-primary"
+                                                    : ""
+                                            }`}
+                                            onClick={() =>
+                                                setSelectedCategory(
+                                                    selectedCategory === type
+                                                        ? null
+                                                        : type
                                                 )
-                                            )}
-                                        </ul>
-                                    </div>
-                                </AlertDescription>
-                            </Alert>
-                        ))}
+                                            }
+                                        >
+                                            <CardContent className="pt-6">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        {getDataTypeIcon(type)}
+                                                        <span className="font-medium">
+                                                            {type}
+                                                        </span>
+                                                    </div>
+                                                    <Badge>
+                                                        {count as number}
+                                                    </Badge>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                            </div>
+
+                            {selectedCategory &&
+                                metrics?.sensitiveDataByType && (
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>
+                                                {selectedCategory} Details
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <Alert>
+                                                <Info className="h-4 w-4" />
+                                                <AlertTitle>
+                                                    Information
+                                                </AlertTitle>
+                                                <AlertDescription>
+                                                    {
+                                                        metrics
+                                                            .sensitiveDataByType[
+                                                            selectedCategory
+                                                        ]
+                                                    }{" "}
+                                                    instances of{" "}
+                                                    {selectedCategory} data were
+                                                    detected in the
+                                                    conversation.
+                                                </AlertDescription>
+                                            </Alert>
+                                        </CardContent>
+                                    </Card>
+                                )}
+                        </div>
                     </TabsContent>
 
                     <TabsContent value="trends" className="space-y-4">
-                        {trends?.map((trend, index) => (
-                            <Card key={index}>
-                                <CardHeader>
-                                    <div className="flex items-center justify-between">
-                                        <CardTitle className="text-lg">
-                                            {trend.type}
-                                        </CardTitle>
-                                        <div className="flex items-center gap-2">
-                                            {getTrendIcon(trend.direction)}
-                                            <Badge
-                                                variant={
-                                                    trend.direction ===
-                                                    "increasing"
-                                                        ? "destructive"
-                                                        : "default"
-                                                }
-                                            >
-                                                {trend.changePercentage}% in{" "}
-                                                {trend.period}
-                                            </Badge>
-                                        </div>
-                                    </div>
-                                </CardHeader>
-                                <CardContent>
-                                    <p className="text-sm text-muted-foreground">
-                                        {trend.description}
-                                    </p>
-                                </CardContent>
-                            </Card>
-                        ))}
+                        <ScrollArea className="h-[600px] pr-4">
+                            <div className="space-y-4">
+                                {trends?.map((trend, index) => (
+                                    <Card key={index}>
+                                        <CardHeader>
+                                            <div className="flex items-center justify-between">
+                                                <CardTitle className="text-lg">
+                                                    {trend.type}
+                                                </CardTitle>
+                                                <div className="flex items-center gap-2">
+                                                    {getTrendIcon(
+                                                        trend.direction
+                                                    )}
+                                                    <Badge
+                                                        variant={
+                                                            trend.direction ===
+                                                            "increasing"
+                                                                ? "destructive"
+                                                                : "default"
+                                                        }
+                                                    >
+                                                        {trend.changePercentage}
+                                                        % in {trend.period}
+                                                    </Badge>
+                                                </div>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <p className="text-sm text-muted-foreground">
+                                                {trend.description}
+                                            </p>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        </ScrollArea>
                     </TabsContent>
                 </Tabs>
             </CardContent>
